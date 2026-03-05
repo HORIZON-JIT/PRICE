@@ -12,7 +12,7 @@ from price.calc.purchased_calc import PurchasedCalculator
 from price.calc.simple_calc import SimpleRateCalculator
 from price.config import RateConfig
 from price.models.enums import PartPrefix, classify_prefix
-from price.models.manufacturing import AssemblyResult
+from price.models.manufacturing import AssemblyResult, MDetail
 from price.models.price_result import PriceResult
 
 
@@ -120,3 +120,7 @@ class PriceDispatcher:
     def get_assembly_details(self) -> dict[str, AssemblyResult]:
         """A番の構成部品詳細データを返す."""
         return self._a_calc.assembly_details
+
+    def get_m_details(self) -> dict[str, MDetail]:
+        """M番の工程内容詳細データを返す."""
+        return self._calculators[PartPrefix.M].m_details

@@ -63,6 +63,14 @@ def _is_a_part(buhin_bango: str) -> bool:
         return False
 
 
+def _is_m_part(buhin_bango: str) -> bool:
+    """M番かどうか判定する."""
+    try:
+        return classify_prefix(buhin_bango) == PartPrefix.M
+    except ValueError:
+        return False
+
+
 def _get_part_numbers() -> list[str] | None:
     """アクティブな入力方法から品番リストを取得する."""
     if uploaded_file is not None:
@@ -270,5 +278,83 @@ if "results" in st.session_state:
 
                     styled_comp = comp_df.style.apply(_highlight_null_comp, axis=1)
                     st.dataframe(styled_comp, use_container_width=True, hide_index=False)
+
+                    # A番構成部品内のM番 → 工程詳細表示ボタン
+                    m_details = stats.get("m_details", {})
+                    m_children = [c.buhin_bango for c in detail.components
+                                  if _is_m_part(c.buhin_bango)
+                                  and c.buhin_bango in m_details]
+                    if m_children:
+                        st.markdown("**構成M番の工程詳細:**")
+                        m_cols = st.columns(min(len(m_children), 4))
+                        for mi, mc in enumerate(m_children):
+                            col_idx = mi % 4
+                            if m_cols[col_idx].button(
+                                f"工程詳細: {mc}",
+                                key=f"a_m_detail_{selected_a}_{mc}",
+                                use_container_width=True,
+                            ):
+                                st.session_state["selected_m_detail"] = mc
                 else:
                     st.info("構成部品がありません。")
+
+    # ---------- M番 工程内容詳細 ----------
+    m_details = stats.get("m_details", {})
+    if m_details:
+        st.markdown("---")
+        st.subheader("M番 工程内容詳細")
+
+        # M番品番リスト (トップレベル + A番子部品)
+        m_parts_in_results = [r.buhin_bango for r in results
+                              if _is_m_part(r.buhin_bango)
+                              and r.buhin_bango in m_details]
+        # A番子部品のM番（トップレベルに含まれないもの）
+        m_from_assembly = [pn for pn in m_details
+                           if pn not in set(m_parts_in_results)]
+        all_m_parts = m_parts_in_results + m_from_assembly
+
+        if all_m_parts:
+            cols_per_row = 4
+            for i in range(0, len(all_m_parts), cols_per_row):
+                cols = st.columns(cols_per_row)
+                for j, col in enumerate(cols):
+                    idx = i + j
+                    if idx < len(all_m_parts):
+                        pn = all_m_parts[idx]
+                        detail_m = m_details.get(pn)
+                        label = f"工程詳細: {pn}"
+                        if detail_m and detail_m.buhi_mei:
+                            label += f" ({detail_m.buhi_mei})"
+                        if col.button(label, key=f"m_detail_{pn}",
+                                      use_container_width=True):
+                            st.session_state["selected_m_detail"] = pn
+
+        # 選択中のM番の工程詳細を表示
+        selected_m = st.session_state.get("selected_m_detail")
+        if selected_m and selected_m in m_details:
+            detail_m = m_details[selected_m]
+            st.markdown(f"### {selected_m} の工程内容")
+            if detail_m.buhi_mei:
+                st.caption(f"部品名: {detail_m.buhi_mei}")
+
+            proc_rows = []
+            for proc in detail_m.processes:
+                proc_rows.append({
+                    "工程順": proc.kote_jun,
+                    "工程": proc.koutei,
+                    "加": proc.ka,
+                    "半": proc.han,
+                    "業者": proc.gyusya,
+                    "業者コスト": float(proc.gyusyacost) if proc.gyusyacost is not None else None,
+                    "段取時間": float(proc.in_plan_t) if proc.in_plan_t is not None else None,
+                    "LOT付帯": float(proc.lot_inc_t) if proc.lot_inc_t is not None else None,
+                    "部品付帯": float(proc.buh_inc_t) if proc.buh_inc_t is not None else None,
+                    "加工サイクル": float(proc.kakou_cycle_t) if proc.kakou_cycle_t is not None else None,
+                    "機人": proc.kijin_flg,
+                    "材料費": float(proc.zairyo_cost) if proc.zairyo_cost is not None else None,
+                })
+            if proc_rows:
+                proc_df = pd.DataFrame(proc_rows)
+                st.dataframe(proc_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("工程データがありません。")

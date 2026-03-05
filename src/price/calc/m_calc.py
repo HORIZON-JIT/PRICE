@@ -15,6 +15,10 @@ from price.util.rounding import roundup_to_10
 class MCalculator(BaseCalculator):
     """M番（製造部品）の計算機."""
 
+    def __init__(self, rate_cfg):
+        super().__init__(rate_cfg)
+        self.m_details: dict = {}
+
     def _select_rate(self, std_price: Decimal, first_process: str,
                      naikote_cost: Decimal | None) -> Decimal:
         """価格帯に基づいて掛率を選択する.
@@ -38,7 +42,13 @@ class MCalculator(BaseCalculator):
 
     def calculate(self, part_numbers: list[str], data: dict) -> list[PriceResult]:
         hyotanka = data.get("hyotanka", {})
+        m_buhin = data.get("m_buhin", {})
         results = []
+
+        # M番工程詳細を保持
+        for pn in part_numbers:
+            if pn in m_buhin:
+                self.m_details[pn] = m_buhin[pn]
 
         for pn in part_numbers:
             ht = hyotanka.get(pn)

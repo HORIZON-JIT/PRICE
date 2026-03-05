@@ -153,21 +153,31 @@ if "results" in st.session_state:
         rows.append(row)
     df = pd.DataFrame(rows)
 
+    # A番でNULLデータありの品番セットを作成
+    a_null_parts = {r.buhin_bango for r in results
+                    if _is_a_part(r.buhin_bango) and r.has_null_data}
+
     # 条件付き色付け
     def _highlight_rows(row_series: pd.Series) -> list[str]:
         styles = [""] * len(row_series)
         idx = {col: i for i, col in enumerate(row_series.index)}
 
+        buhin = row_series.get("品番")
+
+        # A番でNULLデータあり → 行全体を赤文字
+        if buhin in a_null_parts:
+            styles = ["color: #FF0000"] * len(row_series)
+
         std_price = row_series.get("標準単価")
         if std_price is None or std_price == 0:
-            styles[idx["品番"]] = "background-color: #FFFF00"
-            styles[idx["標準単価"]] = "background-color: #FFFF00"
+            styles[idx["品番"]] = styles[idx["品番"]] + "; background-color: #FFFF00" if styles[idx["品番"]] else "background-color: #FFFF00"
+            styles[idx["標準単価"]] = styles[idx["標準単価"]] + "; background-color: #FFFF00" if styles[idx["標準単価"]] else "background-color: #FFFF00"
 
         flag = row_series.get("価格比較")
         if flag == "高":
-            styles[idx["T仕切り"]] = "background-color: #FFFF00"
+            styles[idx["T仕切り"]] = styles[idx["T仕切り"]] + "; background-color: #FFFF00" if styles[idx["T仕切り"]] else "background-color: #FFFF00"
         elif flag == "安":
-            styles[idx["T仕切り"]] = "background-color: #00FFFF"
+            styles[idx["T仕切り"]] = styles[idx["T仕切り"]] + "; background-color: #00FFFF" if styles[idx["T仕切り"]] else "background-color: #00FFFF"
 
         return styles
 
@@ -205,8 +215,12 @@ if "results" in st.session_state:
                     idx = i + j
                     if idx < len(a_parts):
                         pn = a_parts[idx]
-                        if col.button(f"詳細表示: {pn}", key=f"detail_{pn}",
-                                      use_container_width=True):
+                        detail_info = assembly_details.get(pn)
+                        has_warn = detail_info and detail_info.has_null_data
+                        label = f"⚠ 詳細表示: {pn}" if has_warn else f"詳細表示: {pn}"
+                        btn_type = "primary" if has_warn else "secondary"
+                        if col.button(label, key=f"detail_{pn}",
+                                      use_container_width=True, type=btn_type):
                             st.session_state["selected_a_detail"] = pn
 
             # 選択中のA番の詳細を表示
@@ -214,7 +228,12 @@ if "results" in st.session_state:
             if selected_a and selected_a in assembly_details:
                 detail = assembly_details[selected_a]
 
-                st.markdown(f"### {selected_a} の構成部品")
+                if detail.has_null_data:
+                    st.markdown(
+                        f"### :red[{selected_a} の構成部品]")
+                    st.warning("構成部品に標準単価が取得できないものがあります。")
+                else:
+                    st.markdown(f"### {selected_a} の構成部品")
 
                 # サマリー情報
                 col1, col2, col3, col4 = st.columns(4)
@@ -243,6 +262,13 @@ if "results" in st.session_state:
                     })
                 if comp_rows:
                     comp_df = pd.DataFrame(comp_rows)
-                    st.dataframe(comp_df, use_container_width=True, hide_index=False)
+
+                    def _highlight_null_comp(row_s: pd.Series) -> list[str]:
+                        if row_s.get("単価") is None or row_s.get("T仕切り") is None:
+                            return ["color: #FF0000"] * len(row_s)
+                        return [""] * len(row_s)
+
+                    styled_comp = comp_df.style.apply(_highlight_null_comp, axis=1)
+                    st.dataframe(styled_comp, use_container_width=True, hide_index=False)
                 else:
                     st.info("構成部品がありません。")

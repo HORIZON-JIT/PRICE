@@ -1,0 +1,2 @@
+[console_scripts]
+price = price.main:main

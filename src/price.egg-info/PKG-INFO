@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: price
+Version: 0.1.0
+Summary: 高速価格計算バッチ処理システム
+Requires-Python: >=3.10
+Requires-Dist: oracledb>=2.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: openpyxl>=3.1
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"

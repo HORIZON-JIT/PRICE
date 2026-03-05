@@ -1,0 +1,25 @@
+# データベース接続設定
+database:
+  eco:
+    user: "ECOREAD"
+    password: "ECOread01#"
+    dsn: "172.25.3.119:1521/orcl.hrz.local"
+    pool_min: 2
+    pool_max: 10
+  honps:
+    user: "SELECT1"
+    password: "SELECT1"
+    dsn: "ORAGOLD"
+    pool_min: 1
+    pool_max: 5
+
+# バッチ処理設定
+batch:
+  chunk_size: 999  # OracleのIN句上限
+  max_depth: 10    # A番の再帰解決上限
+
+# 製造原価計算
+manufacturing:
+  up_rate_cell: "Q1"       # テーブルシートのA3相当
+  charge_rate_cell: "R1"   # テーブルシートのB3相当
+  history_days: 365        # 標準加工数の平均計算期間

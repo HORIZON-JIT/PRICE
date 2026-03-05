@@ -119,6 +119,7 @@ def _write_import_sheet(wb: Workbook, results: list[PriceResult]) -> None:
             continue
         # T10000行
         ws.cell(row=row, column=1, value="T10000")
+        ws.cell(row=row, column=3, value="A")
         ws.cell(row=row, column=6, value=r.buhin_bango)
         ws.cell(row=row, column=9, value=r.hi_sikiri)
         ws.cell(row=row, column=10, value=r.kari_jyoudai)
@@ -127,6 +128,7 @@ def _write_import_sheet(wb: Workbook, results: list[PriceResult]) -> None:
         row += 1
         # T20000行
         ws.cell(row=row, column=1, value="T20000")
+        ws.cell(row=row, column=3, value="A")
         ws.cell(row=row, column=6, value=r.buhin_bango)
         ws.cell(row=row, column=9, value=r.hi_sikiri)
         ws.cell(row=row, column=10, value=r.kari_jyoudai)

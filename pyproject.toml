@@ -11,6 +11,7 @@ dependencies = [
     "oracledb>=2.0",
     "pyyaml>=6.0",
     "openpyxl>=3.1",
+    "streamlit>=1.30",
 ]
 
 [project.optional-dependencies]

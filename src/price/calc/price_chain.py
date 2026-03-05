@@ -8,7 +8,11 @@ from decimal import Decimal
 from price.config import PriceChainConfig
 from price.models.enums import PartPrefix, classify_prefix
 from price.models.price_result import PriceResult
-from price.util.rounding import roundup_to_1, roundup_to_10
+from price.util.rounding import (
+    round_half_up_to_1,
+    round_half_up_to_10,
+    roundup_to_1,
+)
 
 
 class PriceChainCalculator:
@@ -47,14 +51,14 @@ class PriceChainCalculator:
             Decimal(str(result.hi_sikiri)) * self.cfg.dealer_var1
         )
 
-        # 上代 (段階別計算)
+        # 上代 (段階別計算) — Ver.8.0: 四捨五入に変更
         kj = Decimal(str(result.kari_jyoudai))
         if kj < self.cfg.jyoudai_band1:
             if kj < 1000:
-                result.jyoudai = roundup_to_1(kj * self.cfg.jyoudai_rate1)
+                result.jyoudai = round_half_up_to_1(kj * self.cfg.jyoudai_rate1)
             else:
-                result.jyoudai = roundup_to_10(kj * self.cfg.jyoudai_rate1)
+                result.jyoudai = round_half_up_to_10(kj * self.cfg.jyoudai_rate1)
         elif kj < self.cfg.jyoudai_band2:
-            result.jyoudai = roundup_to_10(kj * self.cfg.jyoudai_rate2)
+            result.jyoudai = round_half_up_to_10(kj * self.cfg.jyoudai_rate2)
         else:
-            result.jyoudai = roundup_to_10(kj * self.cfg.jyoudai_rate3)
+            result.jyoudai = round_half_up_to_10(kj * self.cfg.jyoudai_rate3)

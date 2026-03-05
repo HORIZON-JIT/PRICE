@@ -54,3 +54,28 @@ class TestPriceChain:
         result = PriceResult(buhin_bango="M1234567-00", t_sikiri=0)
         calc.apply(result)
         assert result.hi_sikiri is None
+
+    def test_jyoudai_uses_round_half_up(self):
+        """上代が四捨五入(Ver.8.0)で計算されることを検証."""
+        cfg = PriceChainConfig(
+            hi_var1=Decimal("0.52"),
+            hi_var2=Decimal("0.57"),
+            hi_var3=Decimal("1.05"),
+            kari_var1=Decimal("0.52"),
+            kari_var2=Decimal("1.05"),
+            kari_var3=Decimal("1.05"),
+            kari_var4=Decimal("1.3068"),
+            dealer_var1=Decimal("1.1"),
+            jyoudai_band1=Decimal("15000"),
+            jyoudai_band2=Decimal("40000"),
+            jyoudai_rate1=Decimal("1.5"),
+            jyoudai_rate2=Decimal("1.3"),
+            jyoudai_rate3=Decimal("1.2"),
+        )
+        calc = PriceChainCalculator(cfg)
+        # 仮上代 5003 × 1.5 = 7504.5 → 四捨五入で 7500 (切り上げなら7510)
+        result = PriceResult(buhin_bango="M1234567-00", t_sikiri=1000)
+        calc.apply(result)
+        # D仕切 = HI仕切 × 1.1
+        assert result.dealer_sikiri is not None
+        assert result.jyoudai is not None

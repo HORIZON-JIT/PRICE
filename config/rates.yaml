@@ -1,45 +1,45 @@
-# 掛率設定 - ユーザーが具体的な数値を設定してください
+# 掛率設定 - 掛率.xlsx「テーブル」シート F列 (20231001より) の値
 # ※ 値が未設定(null)の場合はエラーになります
 
 # T仕切り掛率
 t_sikiri:
   M:
     # M番は価格帯で掛率が変わる
-    band1_threshold: null    # この金額以下 → rate_M1を使用
-    band2_threshold: null    # この金額以下 → rate_M2を使用 (超えたらrate_M3)
-    band3_threshold: null    # M3適用の下限値 (テーブルシートD5相当)
-    rate_M1: null            # テーブルシートF3相当
-    rate_M2: null            # テーブルシートF4相当
-    rate_M3: null            # テーブルシートF5相当
-  "4": null                  # テーブルシートF10相当
-  E: null                    # テーブルシートF19相当 (F番も同じ掛率)
-  A: null                    # テーブルシートF27相当 (※除算で使用)
-  L: null                    # テーブルシートF32相当
-  CV: null                   # テーブルシートF36相当
-  UM: null                   # テーブルシートF40相当
-  P: null                    # テーブルシートF23相当
+    band1_threshold: 500       # テーブルシートE3: この金額以下 → rate_M1を使用
+    band2_threshold: 5000      # テーブルシートE4: この金額以下 → rate_M2を使用 (超えたらrate_M3)
+    band3_threshold: 5000      # テーブルシートD5: M3適用の下限値
+    rate_M1: 3.465             # テーブルシートF3
+    rate_M2: 3.465             # テーブルシートF4
+    rate_M3: 2.8875            # テーブルシートF5
+  "4": 1.5246                  # テーブルシートF10
+  E: 1.5246                    # テーブルシートF19 (F番も同じ掛率)
+  A: 0.85                      # テーブルシートF27 (※除算で使用)
+  L: 1.5246                    # テーブルシートF32
+  CV: 1.5246                   # テーブルシートF36
+  UM: 1.5246                   # テーブルシートF40
+  P: 1.5246                    # テーブルシートF23
 
 # 製造原価パラメータ
 manufacturing:
-  up_rate: null              # テーブルシートA3相当 (UP)
-  charge_rate: null          # テーブルシートB3相当 (チャージ)
+  up_rate: 1.29                # テーブルシートA3 (UP)
+  charge_rate: 3737            # テーブルシートB3 (チャージ)
 
 # 価格チェーン (HI仕切→仮上代→D仕切→上代)
 price_chain:
   hi_sikiri:
-    var1: null               # テーブルシートF51相当
-    var2: null               # テーブルシートF52相当
-    var3: null               # テーブルシートF53相当
+    var1: 0.52                 # テーブルシートF51
+    var2: 0.57                 # テーブルシートF52
+    var3: 1.05                 # テーブルシートF53
   kari_jyoudai:
-    var1: null               # テーブルシートF57相当
-    var2: null               # テーブルシートF58相当
-    var3: null               # テーブルシートF59相当 (4番以外)
-    var4: null               # テーブルシートF60相当 (4番以外)
+    var1: 0.52                 # テーブルシートF57
+    var2: 1.05                 # テーブルシートF58
+    var3: 1.05                 # テーブルシートF59 (4番以外)
+    var4: 1.3068               # テーブルシートF60 (4番以外)
   dealer_sikiri:
-    var1: null               # テーブルシートF63相当
+    var1: 1.155                # テーブルシートF63
   jyoudai:
-    band1_threshold: null    # テーブルシートE71相当
-    band2_threshold: null    # テーブルシートE72相当
-    rate1: null              # テーブルシートF71相当 (< band1)
-    rate2: null              # テーブルシートF72相当 (band1 <= x < band2)
-    rate3: null              # テーブルシートF73相当 (>= band2)
+    band1_threshold: 15000     # テーブルシートE71
+    band2_threshold: 40000     # テーブルシートE72
+    rate1: 1.5                 # テーブルシートF71 (< band1)
+    rate2: 1.3                 # テーブルシートF72 (band1 <= x < band2)
+    rate3: 1.2                 # テーブルシートF73 (>= band2)

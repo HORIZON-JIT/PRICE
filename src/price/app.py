@@ -195,14 +195,24 @@ if "results" in st.session_state:
                     if _is_a_part(r.buhin_bango) and r.buhin_bango in assembly_details]
 
         if a_parts:
-            selected_a = st.selectbox(
-                "A番を選択してください",
-                options=a_parts,
-                format_func=lambda x: f"{x}",
-            )
+            # 各A番に詳細表示ボタンを配置
+            cols_per_row = 4
+            for i in range(0, len(a_parts), cols_per_row):
+                cols = st.columns(cols_per_row)
+                for j, col in enumerate(cols):
+                    idx = i + j
+                    if idx < len(a_parts):
+                        pn = a_parts[idx]
+                        if col.button(f"詳細表示: {pn}", key=f"detail_{pn}",
+                                      use_container_width=True):
+                            st.session_state["selected_a_detail"] = pn
 
+            # 選択中のA番の詳細を表示
+            selected_a = st.session_state.get("selected_a_detail")
             if selected_a and selected_a in assembly_details:
                 detail = assembly_details[selected_a]
+
+                st.markdown(f"### {selected_a} の構成部品")
 
                 # サマリー情報
                 col1, col2, col3, col4 = st.columns(4)
@@ -215,7 +225,6 @@ if "results" in st.session_state:
                 col5.metric("工数(分)", f"{detail.kousuu:,.1f}")
                 col6.metric("原価合計", f"{detail.genka_total:,.0f}")
                 col7.metric("組立場所", detail.assembly_place or "-")
-                # A番T仕切り（結果から取得）
                 a_result = next((r for r in results if r.buhin_bango == selected_a), None)
                 col8.metric("A番T仕切", f"{a_result.t_sikiri:,}" if a_result and a_result.t_sikiri else "-")
 

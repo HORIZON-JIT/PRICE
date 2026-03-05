@@ -26,8 +26,19 @@ def roundup_to_1(value) -> int:
     return int(math.ceil(float(value)))
 
 
+def round_half_up_to_100(value) -> int:
+    """10の位を四捨五入して100円単位にする.
+
+    例: 185360 → 185400, 185340 → 185300, 185350 → 185400
+    """
+    if value is None or value == 0:
+        return 0
+    v = Decimal(str(value))
+    return int((v / 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP) * 100)
+
+
 def round_half_up_to_10(value) -> int:
-    """10円単位で四捨五入する.
+    """1の位を四捨五入して10円単位にする.
 
     例: 7504.5 → 7500, 7505 → 7510, 7500 → 7500
     """

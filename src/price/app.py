@@ -147,6 +147,8 @@ if "results" in st.session_state:
             val = getattr(r, attr, None)
             if attr == "has_null_data":
                 val = "有" if val else ""
+            if attr == "standard_price" and val is not None:
+                val = int(val)
             row[header] = val
         rows.append(row)
     df = pd.DataFrame(rows)

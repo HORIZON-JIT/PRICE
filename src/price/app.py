@@ -1,4 +1,4 @@
-"""Streamlit Web UI for PRICE 価格演算システム.
+"""Streamlit Web UI for 価格演算システム.
 
 起動: streamlit run src/price/app.py
 """
@@ -17,7 +17,7 @@ from price.main import process_parts
 from price.models.enums import PartPrefix, classify_prefix
 
 # ---------- ページ設定 ----------
-st.set_page_config(page_title="PRICE 価格演算", layout="wide")
+st.set_page_config(page_title="価格演算", layout="wide")
 
 # ---------- サイドバー: 設定 ----------
 with st.sidebar:
@@ -36,7 +36,7 @@ with st.sidebar:
         rates_path = None
 
 # ---------- メインエリア ----------
-st.title("PRICE 価格演算システム")
+st.title("価格演算システム")
 
 # ---------- 入力タブ ----------
 tab_excel, tab_manual = st.tabs(["Excelアップロード", "手入力"])

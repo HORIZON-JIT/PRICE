@@ -14,6 +14,7 @@ from price.config import load_config
 from price.db.pool import PoolManager
 from price.export.excel_writer import COLUMNS, write_results
 from price.main import process_parts
+from price.models.enums import PartPrefix, classify_prefix
 
 # ---------- ページ設定 ----------
 st.set_page_config(page_title="PRICE 価格計算", layout="wide")
@@ -52,6 +53,14 @@ with tab_manual:
         height=200,
         placeholder="M12345\n4ABCDE\nA99999",
     )
+
+
+def _is_a_part(buhin_bango: str) -> bool:
+    """A番かどうか判定する."""
+    try:
+        return classify_prefix(buhin_bango) == PartPrefix.A
+    except ValueError:
+        return False
 
 
 def _get_part_numbers() -> list[str] | None:
@@ -174,3 +183,55 @@ if "results" in st.session_state:
         file_name="price_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.document",
     )
+
+    # ---------- A番 構成部品詳細 ----------
+    assembly_details = stats.get("assembly_details", {})
+    if assembly_details:
+        st.markdown("---")
+        st.subheader("A番 構成部品詳細")
+
+        # A番の品番リストを作成
+        a_parts = [r.buhin_bango for r in results
+                    if _is_a_part(r.buhin_bango) and r.buhin_bango in assembly_details]
+
+        if a_parts:
+            selected_a = st.selectbox(
+                "A番を選択してください",
+                options=a_parts,
+                format_func=lambda x: f"{x}",
+            )
+
+            if selected_a and selected_a in assembly_details:
+                detail = assembly_details[selected_a]
+
+                # サマリー情報
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("部品合計", f"{detail.buhin_total:,.0f}")
+                col2.metric("T仕切合計", f"{detail.t_sikiri_total:,}")
+                col3.metric("工数×チャージ", f"{detail.kousuu_x_charge:,.0f}")
+                col4.metric("社外組立費", f"{detail.kumitate_gaichuhi:,.0f}")
+
+                col5, col6, col7, col8 = st.columns(4)
+                col5.metric("工数(分)", f"{detail.kousuu:,.1f}")
+                col6.metric("原価合計", f"{detail.genka_total:,.0f}")
+                col7.metric("組立場所", detail.assembly_place or "-")
+                # A番T仕切り（結果から取得）
+                a_result = next((r for r in results if r.buhin_bango == selected_a), None)
+                col8.metric("A番T仕切", f"{a_result.t_sikiri:,}" if a_result and a_result.t_sikiri else "-")
+
+                # 構成部品テーブル
+                comp_rows = []
+                for comp in detail.components:
+                    comp_rows.append({
+                        "部品番号": comp.buhin_bango,
+                        "員数": int(comp.inzuu),
+                        "単価": float(comp.tanka) if comp.tanka is not None else None,
+                        "T仕切り": comp.t_sikiri,
+                        "T仕切り×員数": comp.t_sikiri_x_inzuu,
+                        "部品名": comp.buhin_name,
+                    })
+                if comp_rows:
+                    comp_df = pd.DataFrame(comp_rows)
+                    st.dataframe(comp_df, use_container_width=True, hide_index=False)
+                else:
+                    st.info("構成部品がありません。")

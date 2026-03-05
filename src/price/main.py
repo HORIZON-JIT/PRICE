@@ -151,6 +151,7 @@ def process_parts(
         "calc_time": calc_time,
         "total": len(results),
         "null_count": null_count,
+        "assembly_details": dispatcher.get_assembly_details(),
     }
     return results, stats
 

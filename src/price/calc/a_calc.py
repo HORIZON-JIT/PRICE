@@ -9,6 +9,7 @@ from decimal import Decimal
 from price.calc.base import BaseCalculator
 from price.config import RateConfig
 from price.models.enums import PartPrefix, classify_prefix
+from price.models.manufacturing import AssemblyResult
 from price.models.price_result import PriceResult
 from price.util.rounding import roundup_to_10
 
@@ -19,6 +20,7 @@ class ACalculator(BaseCalculator):
     def __init__(self, rate_cfg: RateConfig, sub_calculators: dict | None = None):
         super().__init__(rate_cfg)
         self._sub_calcs = sub_calculators or {}
+        self.assembly_details: dict[str, AssemblyResult] = {}
 
     def _calc_component_t_sikiri(self, buhin_bango: str, std_price: Decimal | None,
                                  first_process: str, naikote_cost: Decimal | None) -> int | None:
@@ -85,6 +87,8 @@ class ACalculator(BaseCalculator):
             buhin_total = Decimal("0")
             has_null = False
 
+            # 構成部品の詳細を保持するためコピーを作成
+            detail_components = []
             for comp in components:
                 comp_ht = hyotanka.get(comp.buhin_bango)
                 comp_price = comp_ht.standard_price if comp_ht else None
@@ -103,6 +107,19 @@ class ACalculator(BaseCalculator):
                 if comp_price is not None:
                     buhin_total += comp.inzuu * comp_price
 
+                # 詳細用に構成部品データを記録
+                from price.models.manufacturing import AssemblyComponent
+                detail_comp = AssemblyComponent(
+                    a_bango=pn,
+                    buhin_bango=comp.buhin_bango,
+                    inzuu=comp.inzuu,
+                    buhin_name=comp.buhin_name,
+                    tanka=comp_price,
+                    t_sikiri=comp_t_sikiri,
+                    t_sikiri_x_inzuu=int(comp.inzuu * comp_t_sikiri) if comp_t_sikiri else None,
+                )
+                detail_components.append(detail_comp)
+
             # A番T仕切合計 = Σ(員数×T仕切) + 工数×チャージ + 社外組立費
             t_sikiri_sum = t_sikiri_total + kousuu_x_charge + assembly_cost
 
@@ -113,6 +130,22 @@ class ACalculator(BaseCalculator):
 
             # 原価合計 = 部品合計 + 工数×チャージ + 社外組立費
             genka_total = buhin_total + kousuu_x_charge + assembly_cost
+
+            # A番詳細データを保存
+            assembly_place = kousuu_data.get("line_cd", "")
+            self.assembly_details[pn] = AssemblyResult(
+                a_bango=pn,
+                components=detail_components,
+                buhin_total=buhin_total,
+                t_sikiri_total=int(t_sikiri_total),
+                kousuu=kousuu_min,
+                kousuu_x_charge=kousuu_x_charge,
+                kumitate_gaichuhi=assembly_cost,
+                genka_total=genka_total,
+                t_sikiri_sum=int(t_sikiri_sum) if t_sikiri_sum > 0 else 0,
+                assembly_place=assembly_place,
+                has_null_data=has_null,
+            )
 
             results.append(PriceResult(
                 buhin_bango=pn,

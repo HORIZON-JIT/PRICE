@@ -12,6 +12,7 @@ from price.calc.purchased_calc import PurchasedCalculator
 from price.calc.simple_calc import SimpleRateCalculator
 from price.config import RateConfig
 from price.models.enums import PartPrefix, classify_prefix
+from price.models.manufacturing import AssemblyResult
 from price.models.price_result import PriceResult
 
 
@@ -19,10 +20,11 @@ class PriceDispatcher:
     """部品番号のプレフィックスに基づいて適切な計算機にルーティングする."""
 
     def __init__(self, rate_cfg: RateConfig):
+        self._a_calc = ACalculator(rate_cfg)
         self._calculators: dict[PartPrefix, BaseCalculator] = {
             PartPrefix.M: MCalculator(rate_cfg),
             PartPrefix.FOUR: PurchasedCalculator(rate_cfg),
-            PartPrefix.A: ACalculator(rate_cfg),
+            PartPrefix.A: self._a_calc,
             PartPrefix.E: SimpleRateCalculator(rate_cfg, PartPrefix.E),
             PartPrefix.F: SimpleRateCalculator(rate_cfg, PartPrefix.F),
             PartPrefix.L: SimpleRateCalculator(rate_cfg, PartPrefix.L),
@@ -112,3 +114,7 @@ class PriceDispatcher:
         results.sort(key=lambda r: order.get(r.buhin_bango, len(part_numbers)))
 
         return results
+
+    def get_assembly_details(self) -> dict[str, AssemblyResult]:
+        """A番の構成部品詳細データを返す."""
+        return self._a_calc.assembly_details

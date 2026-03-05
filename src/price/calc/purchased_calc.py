@@ -1,6 +1,6 @@
 """4番（購入品）の計算.
 
-T仕切 = roundup(購入単価 × 掛率_4, -1)
+H仕切 = roundup(購入単価 × 掛率_4, -1)
 外貨の場合は為替レートで変換後に計算。
 """
 from decimal import Decimal
@@ -30,14 +30,14 @@ class PurchasedCalculator(BaseCalculator):
                 if rate is not None:
                     tanka = convert_to_jpy(tanka, rate)
 
-            t_sikiri = None
+            h_sikiri = None
             if tanka is not None and tanka > 0:
-                t_sikiri = roundup_to_10(tanka * self.rate_cfg.rate_4)
+                h_sikiri = roundup_to_10(tanka * self.rate_cfg.rate_4)
 
             results.append(PriceResult(
                 buhin_bango=pn,
                 standard_price=tanka,
-                t_sikiri=t_sikiri,
+                h_sikiri=h_sikiri,
                 kakeru=self.rate_cfg.rate_4,
                 has_null_data=(tanka is None or tanka == 0),
             ))

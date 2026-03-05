@@ -30,8 +30,8 @@ class AssemblyComponent:
     inzuu: Decimal         # 員数
     buhin_name: str = ""   # 部品名
     tanka: Decimal | None = None       # 単価
-    t_sikiri: int | None = None        # T仕切り
-    t_sikiri_x_inzuu: int | None = None  # T仕切り×員数
+    h_sikiri: int | None = None        # H仕切り
+    h_sikiri_x_inzuu: int | None = None  # H仕切り×員数
 
 
 @dataclass
@@ -40,11 +40,11 @@ class AssemblyResult:
     a_bango: str
     components: list[AssemblyComponent]
     buhin_total: Decimal = Decimal("0")     # 部品合計 (Σ員数×単価)
-    t_sikiri_total: int = 0                 # T仕切合計 (Σ員数×T仕切)
+    h_sikiri_total: int = 0                 # H仕切合計 (Σ員数×H仕切)
     kousuu: Decimal = Decimal("0")          # 工数 (分)
     kousuu_x_charge: Decimal = Decimal("0") # 工数×チャージ
     kumitate_gaichuhi: Decimal = Decimal("0")  # 社外組立費
     genka_total: Decimal = Decimal("0")     # 原価合計
-    t_sikiri_sum: int = 0                   # T仕切合計(最終)
+    h_sikiri_sum: int = 0                   # H仕切合計(最終)
     assembly_place: str = ""                # 組立場所
     has_null_data: bool = False

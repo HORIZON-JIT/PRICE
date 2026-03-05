@@ -20,7 +20,7 @@ HEADER_FONT = Font(bold=True)
 COLUMNS = [
     ("品番", "buhin_bango"),
     ("標準単価", "standard_price"),
-    ("T仕切り", "t_sikiri"),
+    ("H仕切り", "h_sikiri"),
     ("掛率", "kakeru"),
     ("HI仕切り", "hi_sikiri"),
     ("仮上代", "kari_jyoudai"),
@@ -76,14 +76,14 @@ def _write_import_sheet(ws, results: list[PriceResult]) -> None:
 
     row = 2
     for r in results:
-        if r.t_sikiri is None:
+        if r.h_sikiri is None:
             continue
         # T10000行
         ws.cell(row=row, column=1, value="T10000")
         ws.cell(row=row, column=3, value=r.zaiko_cd)
         ws.cell(row=row, column=6, value=r.buhin_bango)
         ws.cell(row=row, column=8, value=today)
-        ws.cell(row=row, column=9, value=r.t_sikiri)
+        ws.cell(row=row, column=9, value=r.h_sikiri)
         ws.cell(row=row, column=10, value=r.hi_sikiri)
         ws.cell(row=row, column=11, value=r.dealer_sikiri)
         ws.cell(row=row, column=12, value=r.jyoudai)
@@ -93,7 +93,7 @@ def _write_import_sheet(ws, results: list[PriceResult]) -> None:
         ws.cell(row=row, column=3, value=r.zaiko_cd)
         ws.cell(row=row, column=6, value=r.buhin_bango)
         ws.cell(row=row, column=8, value=today)
-        ws.cell(row=row, column=9, value=r.t_sikiri)
+        ws.cell(row=row, column=9, value=r.h_sikiri)
         ws.cell(row=row, column=10, value=r.hi_sikiri)
         ws.cell(row=row, column=11, value=0)
         ws.cell(row=row, column=12, value=r.jyoudai)

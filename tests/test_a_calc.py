@@ -47,8 +47,8 @@ class TestACalculator:
         results = calc.calculate(["A1234567-00"], data)
         assert len(results) == 1
         r = results[0]
-        assert r.t_sikiri is not None
-        assert r.t_sikiri > 0
+        assert r.h_sikiri is not None
+        assert r.h_sikiri > 0
         # A番は除算: roundup(total / 0.9, -1)
         assert r.kakeru == Decimal("0.9")
 
@@ -69,4 +69,4 @@ class TestACalculator:
         # assembly_cost = 0
         # total ≈ 833.33
         # roundup(833.33 / 0.9, -1) = roundup(925.93, -1) = 930
-        assert r.t_sikiri is not None
+        assert r.h_sikiri is not None

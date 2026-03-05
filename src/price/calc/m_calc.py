@@ -3,7 +3,7 @@
 VBAのM番_計算に対応。標準単価に対して価格帯別の掛率を適用。
 特殊条件: 第1工程が@BYのみの場合は掛率_4を使用。
 
-T仕切 = roundup(標準単価 × 掛率_M[tier], -1)
+H仕切 = roundup(標準単価 × 掛率_M[tier], -1)
 """
 from decimal import Decimal
 
@@ -46,16 +46,16 @@ class MCalculator(BaseCalculator):
             first_process = ht.kote_1 if ht else ""
             naikote_cost = ht.naikote_cost if ht else None
 
-            t_sikiri = None
+            h_sikiri = None
             kakeru = None
             if std_price is not None and std_price > 0:
                 kakeru = self._select_rate(std_price, first_process, naikote_cost)
-                t_sikiri = roundup_to_10(std_price * kakeru)
+                h_sikiri = roundup_to_10(std_price * kakeru)
 
             results.append(PriceResult(
                 buhin_bango=pn,
                 standard_price=std_price,
-                t_sikiri=t_sikiri,
+                h_sikiri=h_sikiri,
                 kakeru=kakeru,
                 naikote_cost=naikote_cost,
                 gaikote_cost=ht.gaikote_cost if ht else None,

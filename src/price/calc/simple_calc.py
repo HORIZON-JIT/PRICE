@@ -1,6 +1,6 @@
 """E/F/L/CV/P番の単純掛率計算.
 
-T仕切 = roundup(標準単価 × 掛率, -1)
+H仕切 = roundup(標準単価 × 掛率, -1)
 """
 from decimal import Decimal
 
@@ -37,14 +37,14 @@ class SimpleRateCalculator(BaseCalculator):
             ht = hyotanka.get(pn)
             std_price = ht.standard_price if ht else None
 
-            t_sikiri = None
+            h_sikiri = None
             if std_price is not None and std_price > 0:
-                t_sikiri = roundup_to_10(std_price * self._rate)
+                h_sikiri = roundup_to_10(std_price * self._rate)
 
             results.append(PriceResult(
                 buhin_bango=pn,
                 standard_price=std_price,
-                t_sikiri=t_sikiri,
+                h_sikiri=h_sikiri,
                 kakeru=self._rate,
                 naikote_cost=ht.naikote_cost if ht else None,
                 gaikote_cost=ht.gaikote_cost if ht else None,

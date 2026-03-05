@@ -39,7 +39,7 @@ class PriceDispatcher:
         part_numbers: list[str],
         data: dict,
     ) -> list[PriceResult]:
-        """全部品のT仕切り〜上代を一括計算する.
+        """全部品のH仕切り〜上代を一括計算する.
 
         Args:
             part_numbers: 全部品番号リスト
@@ -96,13 +96,13 @@ class PriceDispatcher:
                 r.zaiko_cd = sb.zaiko_cd
             if sb and sb.h_sikiri is not None:
                 r.h_sikiri_eco = sb.h_sikiri
-                if h_sikiri_adj is not None and r.t_sikiri is not None:
+                if h_sikiri_adj is not None and r.h_sikiri is not None:
                     from decimal import Decimal
                     adjusted = int(sb.h_sikiri * Decimal(str(h_sikiri_adj)))
                     r.h_sikiri_eco_adjusted = adjusted
-                    if r.t_sikiri >= adjusted:
+                    if r.h_sikiri >= adjusted:
                         r.price_comparison_flag = "高"
-                    elif r.t_sikiri < int(sb.h_sikiri):
+                    elif r.h_sikiri < int(sb.h_sikiri):
                         r.price_comparison_flag = "安"
 
         # 部品区分の追加

@@ -21,6 +21,7 @@ from price.db.honps_repo import HonpsRepo
 from price.db.pool import PoolManager
 from price.export.excel_writer import write_results
 from price.models.enums import PartPrefix, classify_prefix
+from price.models.price_result import PriceResult
 
 
 def read_input_parts(input_path: str | Path) -> list[str]:
@@ -112,6 +113,48 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
     return data
 
 
+def process_parts(
+    part_numbers: list[str],
+    config: AppConfig,
+    on_progress: callable | None = None,
+) -> tuple[list[PriceResult], dict]:
+    """コア処理パイプライン（UI・CLI両対応）.
+
+    Args:
+        part_numbers: 品番リスト
+        config: AppConfig（掛率・DB設定込み）
+        on_progress: 進捗コールバック(step, total, message)
+
+    Returns:
+        (results, stats) stats には fetch_time, calc_time, total, null_count
+    """
+    def _progress(step, total, msg):
+        if on_progress:
+            on_progress(step, total, msg)
+
+    _progress(1, 3, "データ取得中...")
+    start = time.time()
+    data = prefetch_data(part_numbers, config)
+    fetch_time = time.time() - start
+
+    _progress(2, 3, "計算実行中...")
+    start = time.time()
+    dispatcher = PriceDispatcher(config.rates)
+    results = dispatcher.calculate_batch(part_numbers, data)
+    calc_time = time.time() - start
+
+    _progress(3, 3, "完了")
+
+    null_count = sum(1 for r in results if r.has_null_data)
+    stats = {
+        "fetch_time": fetch_time,
+        "calc_time": calc_time,
+        "total": len(results),
+        "null_count": null_count,
+    }
+    return results, stats
+
+
 def run_batch(input_path: str, output_path: str,
               settings_path: str = "config/settings.yaml",
               rates_path: str = "config/rates.yaml",
@@ -144,29 +187,19 @@ def run_batch(input_path: str, output_path: str,
             print("エラー: 品番が見つかりません。")
             return
 
-        # Phase 1: データ一括取得
+        # Phase 1 + 2: データ取得 → 計算
         print(f"[4/5] データ取得中...")
-        start = time.time()
-        data = prefetch_data(part_numbers, config)
-        fetch_time = time.time() - start
-        print(f"  データ取得完了: {fetch_time:.1f}秒")
-
-        # Phase 2: 一括計算
-        print(f"[5/5] 計算実行中...")
-        start = time.time()
-        dispatcher = PriceDispatcher(config.rates)
-        results = dispatcher.calculate_batch(part_numbers, data)
-        calc_time = time.time() - start
-        print(f"  計算完了: {calc_time:.1f}秒")
+        results, stats = process_parts(part_numbers, config)
+        print(f"  データ取得完了: {stats['fetch_time']:.1f}秒")
+        print(f"[5/5] 計算完了: {stats['calc_time']:.1f}秒")
 
         # Excel出力
         out = write_results(results, output_path)
         print(f"\n結果出力: {out}")
-        print(f"  処理件数: {len(results)}")
-        null_count = sum(1 for r in results if r.has_null_data)
-        if null_count:
-            print(f"  NULLデータあり: {null_count}件")
-        print(f"  合計処理時間: {fetch_time + calc_time:.1f}秒")
+        print(f"  処理件数: {stats['total']}")
+        if stats["null_count"]:
+            print(f"  NULLデータあり: {stats['null_count']}件")
+        print(f"  合計処理時間: {stats['fetch_time'] + stats['calc_time']:.1f}秒")
 
     finally:
         PoolManager.close()

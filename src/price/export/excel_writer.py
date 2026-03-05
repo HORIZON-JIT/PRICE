@@ -2,6 +2,7 @@
 
 VBAの取込データ作成()に対応。計算結果をExcelファイルに書き出す。
 """
+import io
 from pathlib import Path
 
 from openpyxl import Workbook
@@ -94,6 +95,9 @@ def write_results(results: list[PriceResult], output_path: str | Path) -> Path:
     # 取込データシート (ECOインポート用)
     _write_import_sheet(wb, results)
 
+    if isinstance(output_path, io.IOBase):
+        wb.save(output_path)
+        return output_path
     output_path = Path(output_path)
     wb.save(output_path)
     return output_path

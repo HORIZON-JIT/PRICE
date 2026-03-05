@@ -3,13 +3,13 @@ database:
   eco:
     user: "ECOREAD"
     password: "ECOread01#"
-    dsn: "172.25.3.119:1521/orcl.hrz.local"
+    dsn: "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=172.25.3.119)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=orcl.hrz.local)))"
     pool_min: 2
     pool_max: 10
   honps:
     user: "SELECT1"
     password: "SELECT1"
-    dsn: "oracle.horizon.co.jp:1521/TAIYO2"
+    dsn: "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=oracle.horizon.co.jp)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=TAIYO2)))"
     pool_min: 1
     pool_max: 5
 

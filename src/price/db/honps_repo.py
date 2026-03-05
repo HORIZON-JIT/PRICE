@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from price.db import honps_queries as Q
 from price.db.pool import PoolManager, chunk_list, make_bind_placeholders
+from price.models.manufacturing import MDetail, MProcessRow
 from price.models.part import HyotankaRow
 
 
@@ -40,9 +41,10 @@ class HonpsRepo:
         return result
 
     @staticmethod
-    def fetch_m_buhin(part_numbers: list[str]) -> dict[str, list[dict]]:
+    def fetch_m_buhin(part_numbers: list[str]) -> dict[str, MDetail]:
         """HONPS M番部品データを一括取得."""
-        result: dict[str, list[dict]] = defaultdict(list)
+        raw: dict[str, list[MProcessRow]] = defaultdict(list)
+        names: dict[str, str] = {}
         with PoolManager.honps_conn() as conn:
             for chunk in chunk_list(part_numbers):
                 ph = make_bind_placeholders(len(chunk))
@@ -50,23 +52,26 @@ class HonpsRepo:
                 with conn.cursor() as cur:
                     cur.execute(sql, chunk)
                     for row in cur:
-                        result[row[0]].append({
-                            "zuban": row[0],
-                            "buhi_mei": row[1] or "",
-                            "zairyo_cost": Decimal(str(row[2])) if row[2] is not None else None,
-                            "kote_jun": row[3],
-                            "koutei": row[4] or "",
-                            "ka": row[5] or "",
-                            "han": row[6] or "",
-                            "gyusya": row[7] or "",
-                            "gyusyacost": Decimal(str(row[8])) if row[8] is not None else None,
-                            "in_plan_t": Decimal(str(row[9])) if row[9] is not None else None,
-                            "lot_inc_t": Decimal(str(row[10])) if row[10] is not None else None,
-                            "buh_inc_t": Decimal(str(row[11])) if row[11] is not None else None,
-                            "kakou_cycle_t": Decimal(str(row[12])) if row[12] is not None else None,
-                            "kijin_flg": row[13] or "",
-                        })
-        return dict(result)
+                        zuban = row[0]
+                        names.setdefault(zuban, row[1] or "")
+                        raw[zuban].append(MProcessRow(
+                            kote_jun=row[3],
+                            koutei=row[4] or "",
+                            ka=row[5] or "",
+                            han=row[6] or "",
+                            gyusya=row[7] or "",
+                            gyusyacost=Decimal(str(row[8])) if row[8] is not None else None,
+                            in_plan_t=Decimal(str(row[9])) if row[9] is not None else None,
+                            lot_inc_t=Decimal(str(row[10])) if row[10] is not None else None,
+                            buh_inc_t=Decimal(str(row[11])) if row[11] is not None else None,
+                            kakou_cycle_t=Decimal(str(row[12])) if row[12] is not None else None,
+                            kijin_flg=row[13] or "",
+                            zairyo_cost=Decimal(str(row[2])) if row[2] is not None else None,
+                        ))
+        return {
+            zuban: MDetail(zuban=zuban, buhi_mei=names.get(zuban, ""), processes=procs)
+            for zuban, procs in raw.items()
+        }
 
     @staticmethod
     def fetch_yosekose(part_numbers: list[str]) -> dict[str, list[dict]]:

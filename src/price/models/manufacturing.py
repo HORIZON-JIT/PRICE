@@ -23,6 +23,35 @@ class SeizouRow:
 
 
 @dataclass
+class MProcessRow:
+    """M番工程1行分のデータ (honps.m_buhin)."""
+    kote_jun: int                          # 工程順
+    koutei: str = ""                       # 工程
+    ka: str = ""                           # 加
+    han: str = ""                          # 半
+    gyusya: str = ""                       # 業者
+    gyusyacost: Decimal | None = None      # 業者コスト
+    in_plan_t: Decimal | None = None       # 段取時間
+    lot_inc_t: Decimal | None = None       # LOT付帯
+    buh_inc_t: Decimal | None = None       # 部品付帯
+    kakou_cycle_t: Decimal | None = None   # 加工サイクル
+    kijin_flg: str = ""                    # 機人
+    zairyo_cost: Decimal | None = None     # 材料費
+
+
+@dataclass
+class MDetail:
+    """M番1品番分の工程一覧."""
+    zuban: str                             # 品番
+    buhi_mei: str = ""                     # 部品名
+    processes: list[MProcessRow] | None = None
+
+    def __post_init__(self):
+        if self.processes is None:
+            self.processes = []
+
+
+@dataclass
 class AssemblyComponent:
     """A番構成部品."""
     a_bango: str           # A番

@@ -85,6 +85,20 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
         data["a_assembly_cost"] = EcoRepo.fetch_a_assembly_cost(a_parts)
         data["a_assembly_kousuu"] = EcoRepo.fetch_a_assembly_kousuu(a_parts)
 
+    # 1b. M番工程詳細 (トップレベル + A番構成部品内のM番)
+    m_parts = set(groups.get(PartPrefix.M, []))
+    if a_parts and "a_components" in data:
+        for comps in data["a_components"].values():
+            for c in comps:
+                try:
+                    if classify_prefix(c.buhin_bango) == PartPrefix.M:
+                        m_parts.add(c.buhin_bango)
+                except ValueError:
+                    pass
+    if m_parts:
+        print("  M番工程詳細を取得中...")
+        data["m_buhin"] = HonpsRepo.fetch_m_buhin(list(m_parts))
+
     # 2. 購入品(4番)の価格
     four_parts = groups.get(PartPrefix.FOUR, [])
     if four_parts:
@@ -156,12 +170,16 @@ def process_parts(
     _progress(3, 3, "完了")
 
     null_count = sum(1 for r in results if r.has_null_data)
+    # M番詳細: dispatcher経由(トップレベル) + data直接(A番子部品)をマージ
+    m_details = dict(dispatcher.get_m_details())
+    m_details.update(data.get("m_buhin", {}))
     stats = {
         "fetch_time": fetch_time,
         "calc_time": calc_time,
         "total": len(results),
         "null_count": null_count,
         "assembly_details": dispatcher.get_assembly_details(),
+        "m_details": m_details,
     }
     return results, stats
 

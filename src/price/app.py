@@ -192,6 +192,33 @@ if "results" in st.session_state:
     styled_df = df.style.apply(_highlight_rows, axis=1)
     st.dataframe(styled_df, use_container_width=True, height=600)
 
+    # ---------- 品番ジャンプボタン ----------
+    m_details_nav = stats.get("m_details", {})
+    assembly_details_nav = stats.get("assembly_details", {})
+    nav_a = [r.buhin_bango for r in results
+             if _is_a_part(r.buhin_bango) and r.buhin_bango in assembly_details_nav]
+    nav_m = [r.buhin_bango for r in results
+             if _is_m_part(r.buhin_bango) and r.buhin_bango in m_details_nav]
+    if nav_a or nav_m:
+        st.markdown("**詳細表示:**")
+        nav_cols = st.columns(min(len(nav_a) + len(nav_m), 6))
+        nav_idx = 0
+        for pn in nav_a:
+            detail_info = assembly_details_nav.get(pn)
+            has_warn = detail_info and detail_info.has_null_data
+            label = f"A番: {pn}" + (" ⚠" if has_warn else "")
+            if nav_cols[nav_idx % len(nav_cols)].button(
+                label, key=f"nav_a_{pn}", use_container_width=True,
+            ):
+                st.session_state["selected_a_detail"] = pn
+            nav_idx += 1
+        for pn in nav_m:
+            if nav_cols[nav_idx % len(nav_cols)].button(
+                f"M番: {pn}", key=f"nav_m_{pn}", use_container_width=True,
+            ):
+                st.session_state["selected_m_detail"] = pn
+            nav_idx += 1
+
     # Excel ダウンロード
     buf = io.BytesIO()
     write_results(results, buf)
@@ -342,8 +369,8 @@ if "results" in st.session_state:
                 proc_rows.append({
                     "工程順": proc.kote_jun,
                     "工程": proc.koutei,
-                    "加": proc.ka,
-                    "半": proc.han,
+                    "課": proc.ka,
+                    "班": proc.han,
                     "業者": proc.gyusya,
                     "業者コスト": float(proc.gyusyacost) if proc.gyusyacost is not None else None,
                     "段取時間": float(proc.in_plan_t) if proc.in_plan_t is not None else None,

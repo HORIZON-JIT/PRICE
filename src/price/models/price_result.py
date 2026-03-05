@@ -9,7 +9,7 @@ class PriceResult:
     buhin_bango: str
     zaiko_cd: str = ""                     # 在庫CD
     standard_price: Decimal | None = None  # 標準単価
-    t_sikiri: int | None = None            # T仕切り
+    h_sikiri: int | None = None            # H仕切り
     kakeru: Decimal | None = None          # 使用した掛率
     hi_sikiri: int | None = None           # HI仕切り
     kari_jyoudai: int | None = None        # 仮上代

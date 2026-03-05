@@ -6,14 +6,14 @@ from price.models.price_result import PriceResult
 
 
 class BaseCalculator(ABC):
-    """T仕切り計算の基底クラス."""
+    """H仕切り計算の基底クラス."""
 
     def __init__(self, rate_cfg: RateConfig):
         self.rate_cfg = rate_cfg
 
     @abstractmethod
     def calculate(self, part_numbers: list[str], data: dict) -> list[PriceResult]:
-        """部品番号リストとプリフェッチ済みデータからT仕切りを計算する.
+        """部品番号リストとプリフェッチ済みデータからH仕切りを計算する.
 
         Args:
             part_numbers: 同一プレフィックスの部品番号リスト

@@ -47,10 +47,10 @@ class TestPriceDispatcher:
         assert results[1].buhin_bango == "4037888-00"
         assert results[2].buhin_bango == "E1234567-00"
         assert results[3].buhin_bango == "L1234567-00"
-        # 全てT仕切りが計算されていることを確認
+        # 全てH仕切りが計算されていることを確認
         for r in results:
-            assert r.t_sikiri is not None
-            assert r.t_sikiri > 0
+            assert r.h_sikiri is not None
+            assert r.h_sikiri > 0
 
     def test_unknown_prefix_handled(self, sample_rate_config):
         dispatcher = PriceDispatcher(sample_rate_config)

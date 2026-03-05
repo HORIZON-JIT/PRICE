@@ -1,6 +1,6 @@
 """価格チェーン計算.
 
-T仕切りからHI仕切り→仮上代→ディーラー仕切り→上代を連鎖的に計算する。
+H仕切りからHI仕切り→仮上代→ディーラー仕切り→上代を連鎖的に計算する。
 VBAの上代等追加()に対応。
 """
 from decimal import Decimal
@@ -23,23 +23,23 @@ class PriceChainCalculator:
 
     def apply(self, result: PriceResult) -> None:
         """PriceResultにHI仕切り～上代を計算して設定する."""
-        if result.t_sikiri is None or result.t_sikiri <= 0:
+        if result.h_sikiri is None or result.h_sikiri <= 0:
             return
 
-        t = Decimal(str(result.t_sikiri))
+        t = Decimal(str(result.h_sikiri))
         prefix = classify_prefix(result.buhin_bango)
 
-        # HI仕切り = roundup(T仕切 / var1 × var2 × var3, -1)
+        # HI仕切り = roundup(H仕切 / var1 × var2 × var3, -1)
         result.hi_sikiri = roundup_to_10(
             t / self.cfg.hi_var1 * self.cfg.hi_var2 * self.cfg.hi_var3
         )
 
         # 仮上代
         if prefix == PartPrefix.FOUR:
-            # 4番: roundup(T仕切 / var1 × var2, 0)
+            # 4番: roundup(H仕切 / var1 × var2, 0)
             kari = t / self.cfg.kari_var1 * self.cfg.kari_var2
         else:
-            # その他: roundup(T仕切 / var1 × var2 × var3 × var4, 0)
+            # その他: roundup(H仕切 / var1 × var2 × var3 × var4, 0)
             kari = (t / self.cfg.kari_var1
                     * self.cfg.kari_var2
                     * self.cfg.kari_var3

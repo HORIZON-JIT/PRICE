@@ -161,7 +161,7 @@ def _load_rates_from_yaml(rates_path: str | Path) -> RateConfig:
     with open(rates_path, encoding="utf-8") as f:
         rates = yaml.safe_load(f)
 
-    ts = rates["t_sikiri"]
+    ts = rates["h_sikiri"]
     m = ts["M"]
     mfg = rates["manufacturing"]
     pc = rates["price_chain"]

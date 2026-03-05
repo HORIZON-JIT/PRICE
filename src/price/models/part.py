@@ -51,7 +51,7 @@ class Part:
     buhin_bango: str
     standard_price: Decimal | None = None
     h_sikiri_eco: Decimal | None = None
-    t_sikiri: int | None = None
+    h_sikiri: int | None = None
     hi_sikiri: int | None = None
     kari_jyoudai: int | None = None
     dealer_sikiri: int | None = None

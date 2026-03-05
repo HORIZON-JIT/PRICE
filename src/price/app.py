@@ -175,9 +175,9 @@ if "results" in st.session_state:
 
         flag = row_series.get("価格比較")
         if flag == "高":
-            styles[idx["T仕切り"]] = styles[idx["T仕切り"]] + "; background-color: #FFFF00" if styles[idx["T仕切り"]] else "background-color: #FFFF00"
+            styles[idx["H仕切り"]] = styles[idx["H仕切り"]] + "; background-color: #FFFF00" if styles[idx["H仕切り"]] else "background-color: #FFFF00"
         elif flag == "安":
-            styles[idx["T仕切り"]] = styles[idx["T仕切り"]] + "; background-color: #00FFFF" if styles[idx["T仕切り"]] else "background-color: #00FFFF"
+            styles[idx["H仕切り"]] = styles[idx["H仕切り"]] + "; background-color: #00FFFF" if styles[idx["H仕切り"]] else "background-color: #00FFFF"
 
         return styles
 
@@ -238,7 +238,7 @@ if "results" in st.session_state:
                 # サマリー情報
                 col1, col2, col3, col4 = st.columns(4)
                 col1.metric("部品合計", f"{detail.buhin_total:,.0f}")
-                col2.metric("T仕切合計", f"{detail.t_sikiri_total:,}")
+                col2.metric("H仕切合計", f"{detail.h_sikiri_total:,}")
                 col3.metric("工数×チャージ", f"{detail.kousuu_x_charge:,.0f}")
                 col4.metric("社外組立費", f"{detail.kumitate_gaichuhi:,.0f}")
 
@@ -247,7 +247,7 @@ if "results" in st.session_state:
                 col6.metric("原価合計", f"{detail.genka_total:,.0f}")
                 col7.metric("組立場所", detail.assembly_place or "-")
                 a_result = next((r for r in results if r.buhin_bango == selected_a), None)
-                col8.metric("A番T仕切", f"{a_result.t_sikiri:,}" if a_result and a_result.t_sikiri else "-")
+                col8.metric("A番H仕切", f"{a_result.h_sikiri:,}" if a_result and a_result.h_sikiri else "-")
 
                 # 構成部品テーブル
                 comp_rows = []
@@ -256,15 +256,15 @@ if "results" in st.session_state:
                         "部品番号": comp.buhin_bango,
                         "員数": int(comp.inzuu),
                         "単価": float(comp.tanka) if comp.tanka is not None else None,
-                        "T仕切り": comp.t_sikiri,
-                        "T仕切り×員数": comp.t_sikiri_x_inzuu,
+                        "H仕切り": comp.h_sikiri,
+                        "H仕切り×員数": comp.h_sikiri_x_inzuu,
                         "部品名": comp.buhin_name,
                     })
                 if comp_rows:
                     comp_df = pd.DataFrame(comp_rows)
 
                     def _highlight_null_comp(row_s: pd.Series) -> list[str]:
-                        if row_s.get("単価") is None or row_s.get("T仕切り") is None:
+                        if row_s.get("単価") is None or row_s.get("H仕切り") is None:
                             return ["color: #FF0000"] * len(row_s)
                         return [""] * len(row_s)
 

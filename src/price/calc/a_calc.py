@@ -1,8 +1,8 @@
 """A番（組立品）の計算.
 
 VBAのA番()に対応。
-構成部品のT仕切りを合計し、工数×チャージ＋社外組立費を加算。
-A番T仕切 = roundup(T仕切合計 / 掛率_A, -1)  ※除算
+構成部品のH仕切りを合計し、工数×チャージ＋社外組立費を加算。
+A番H仕切 = roundup(H仕切合計 / 掛率_A, -1)  ※除算
 """
 from decimal import Decimal
 
@@ -22,9 +22,9 @@ class ACalculator(BaseCalculator):
         self._sub_calcs = sub_calculators or {}
         self.assembly_details: dict[str, AssemblyResult] = {}
 
-    def _calc_component_t_sikiri(self, buhin_bango: str, std_price: Decimal | None,
+    def _calc_component_h_sikiri(self, buhin_bango: str, std_price: Decimal | None,
                                  first_process: str, naikote_cost: Decimal | None) -> int | None:
-        """構成部品のT仕切を計算する."""
+        """構成部品のH仕切を計算する."""
         if std_price is None or std_price <= 0:
             return None
 
@@ -81,8 +81,8 @@ class ACalculator(BaseCalculator):
             kousuu_min = dandori_time / 60 + Decimal(str(component_count)) * 2
             kousuu_x_charge = kousuu_min / 60 * self.rate_cfg.charge_rate
 
-            # 構成部品ごとのT仕切り計算
-            t_sikiri_total = Decimal("0")
+            # 構成部品ごとのH仕切り計算
+            h_sikiri_total = Decimal("0")
             buhin_total = Decimal("0")
             has_null = False
 
@@ -94,12 +94,12 @@ class ACalculator(BaseCalculator):
                 comp_first = comp_ht.kote_1 if comp_ht else ""
                 comp_naikote = comp_ht.naikote_cost if comp_ht else None
 
-                comp_t_sikiri = self._calc_component_t_sikiri(
+                comp_h_sikiri = self._calc_component_h_sikiri(
                     comp.buhin_bango, comp_price, comp_first, comp_naikote
                 )
 
-                if comp_t_sikiri is not None:
-                    t_sikiri_total += comp.inzuu * comp_t_sikiri
+                if comp_h_sikiri is not None:
+                    h_sikiri_total += comp.inzuu * comp_h_sikiri
                 else:
                     has_null = True
 
@@ -114,18 +114,18 @@ class ACalculator(BaseCalculator):
                     inzuu=comp.inzuu,
                     buhin_name=comp.buhin_name,
                     tanka=comp_price,
-                    t_sikiri=comp_t_sikiri,
-                    t_sikiri_x_inzuu=int(comp.inzuu * comp_t_sikiri) if comp_t_sikiri else None,
+                    h_sikiri=comp_h_sikiri,
+                    h_sikiri_x_inzuu=int(comp.inzuu * comp_h_sikiri) if comp_h_sikiri else None,
                 )
                 detail_components.append(detail_comp)
 
-            # A番T仕切合計 = Σ(員数×T仕切) + 工数×チャージ + 社外組立費
-            t_sikiri_sum = t_sikiri_total + kousuu_x_charge + assembly_cost
+            # A番H仕切合計 = Σ(員数×H仕切) + 工数×チャージ + 社外組立費
+            h_sikiri_sum = h_sikiri_total + kousuu_x_charge + assembly_cost
 
-            # A番T仕切 = roundup(T仕切合計 / 掛率_A, -1)  ※除算
-            a_t_sikiri = None
-            if t_sikiri_sum > 0:
-                a_t_sikiri = roundup_to_10(t_sikiri_sum / self.rate_cfg.rate_a)
+            # A番H仕切 = roundup(H仕切合計 / 掛率_A, -1)  ※除算
+            a_h_sikiri = None
+            if h_sikiri_sum > 0:
+                a_h_sikiri = roundup_to_10(h_sikiri_sum / self.rate_cfg.rate_a)
 
             # 原価合計 = 部品合計 + 工数×チャージ + 社外組立費
             genka_total = buhin_total + kousuu_x_charge + assembly_cost
@@ -136,20 +136,20 @@ class ACalculator(BaseCalculator):
                 a_bango=pn,
                 components=detail_components,
                 buhin_total=buhin_total,
-                t_sikiri_total=int(t_sikiri_total),
+                h_sikiri_total=int(h_sikiri_total),
                 kousuu=kousuu_min,
                 kousuu_x_charge=kousuu_x_charge,
                 kumitate_gaichuhi=assembly_cost,
                 genka_total=genka_total,
-                t_sikiri_sum=int(t_sikiri_sum) if t_sikiri_sum > 0 else 0,
+                h_sikiri_sum=int(h_sikiri_sum) if h_sikiri_sum > 0 else 0,
                 assembly_place=assembly_place,
                 has_null_data=has_null,
             )
 
             results.append(PriceResult(
                 buhin_bango=pn,
-                standard_price=t_sikiri_sum if t_sikiri_sum > 0 else None,
-                t_sikiri=a_t_sikiri,
+                standard_price=h_sikiri_sum if h_sikiri_sum > 0 else None,
+                h_sikiri=a_h_sikiri,
                 kakeru=self.rate_cfg.rate_a,
                 has_null_data=has_null,
             ))

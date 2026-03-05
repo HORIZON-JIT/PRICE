@@ -9,9 +9,8 @@ from price.config import PriceChainConfig
 from price.models.enums import PartPrefix, classify_prefix
 from price.models.price_result import PriceResult
 from price.util.rounding import (
-    round_half_up_to_1,
     round_half_up_to_10,
-    roundup_to_1,
+    roundup_to_10,
 )
 
 
@@ -29,8 +28,8 @@ class PriceChainCalculator:
         t = Decimal(str(result.t_sikiri))
         prefix = classify_prefix(result.buhin_bango)
 
-        # HI仕切り = roundup(T仕切 / var1 × var2 × var3, 0)
-        result.hi_sikiri = roundup_to_1(
+        # HI仕切り = roundup(T仕切 / var1 × var2 × var3, -1)
+        result.hi_sikiri = roundup_to_10(
             t / self.cfg.hi_var1 * self.cfg.hi_var2 * self.cfg.hi_var3
         )
 
@@ -44,20 +43,17 @@ class PriceChainCalculator:
                     * self.cfg.kari_var2
                     * self.cfg.kari_var3
                     * self.cfg.kari_var4)
-        result.kari_jyoudai = roundup_to_1(kari)
+        result.kari_jyoudai = roundup_to_10(kari)
 
-        # ディーラー仕切り = roundup(HI仕切 × var1_de, 0)
-        result.dealer_sikiri = roundup_to_1(
+        # ディーラー仕切り = roundup(HI仕切 × var1_de, -1)
+        result.dealer_sikiri = roundup_to_10(
             Decimal(str(result.hi_sikiri)) * self.cfg.dealer_var1
         )
 
-        # 上代 (段階別計算) — Ver.8.0: 四捨五入に変更
+        # 上代 (段階別計算) — Ver.8.0: 四捨五入(10の位)に変更
         kj = Decimal(str(result.kari_jyoudai))
         if kj < self.cfg.jyoudai_band1:
-            if kj < 1000:
-                result.jyoudai = round_half_up_to_1(kj * self.cfg.jyoudai_rate1)
-            else:
-                result.jyoudai = round_half_up_to_10(kj * self.cfg.jyoudai_rate1)
+            result.jyoudai = round_half_up_to_10(kj * self.cfg.jyoudai_rate1)
         elif kj < self.cfg.jyoudai_band2:
             result.jyoudai = round_half_up_to_10(kj * self.cfg.jyoudai_rate2)
         else:

@@ -92,6 +92,8 @@ class PriceDispatcher:
         h_sikiri_adj = data.get("h_sikiri_adjustment", None)
         for r in results:
             sb = shohin_buhin.get(r.buhin_bango)
+            if sb:
+                r.zaiko_cd = sb.zaiko_cd
             if sb and sb.h_sikiri is not None:
                 r.h_sikiri_eco = sb.h_sikiri
                 if h_sikiri_adj is not None and r.t_sikiri is not None:

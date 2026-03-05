@@ -7,6 +7,7 @@ from decimal import Decimal
 class PriceResult:
     """1部品の最終計算結果."""
     buhin_bango: str
+    zaiko_cd: str = ""                     # 在庫CD
     standard_price: Decimal | None = None  # 標準単価
     t_sikiri: int | None = None            # T仕切り
     kakeru: Decimal | None = None          # 使用した掛率

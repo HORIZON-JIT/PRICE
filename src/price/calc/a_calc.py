@@ -56,8 +56,7 @@ class ACalculator(BaseCalculator):
             return roundup_to_10(std_price * self.rate_cfg.rate_cv)
 
         elif prefix == PartPrefix.UM:
-            # UM番は直接T仕切り金額
-            return int(std_price) if std_price else None
+            return roundup_to_10(std_price * self.rate_cfg.rate_um)
 
         elif prefix == PartPrefix.P:
             return roundup_to_10(std_price * self.rate_cfg.rate_p)

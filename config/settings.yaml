@@ -9,7 +9,7 @@ database:
   honps:
     user: "SELECT1"
     password: "SELECT1"
-    dsn: "ORAGOLD"
+    dsn: "oracle.horizon.co.jp:1521/TAIYO2"
     pool_min: 1
     pool_max: 5
 

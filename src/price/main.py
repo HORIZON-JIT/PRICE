@@ -112,7 +112,8 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
         print("  UM番 H仕切りを取得中...")
         um_shohin = EcoRepo.fetch_um_h_sikiri(um_parts)
         for pn, sb in um_shohin.items():
-            if pn not in data["shohin_buhin"]:
+            existing = data["shohin_buhin"].get(pn)
+            if existing is None or existing.h_sikiri is None:
                 data["shohin_buhin"][pn] = sb
 
     # 4. 部品区分 (全部品)

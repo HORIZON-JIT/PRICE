@@ -72,8 +72,7 @@ def _write_import_sheet(ws, results: list[PriceResult]) -> None:
         cell = ws.cell(row=1, column=col_idx, value=h)
         cell.font = HEADER_FONT
 
-    d = date.today()
-    today = f"{d.year}/{d.month}/{d.day}"
+    today = date.today().strftime("%Y/%m/%d 00:00:00")
 
     row = 2
     for r in results:

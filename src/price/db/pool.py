@@ -20,6 +20,12 @@ _DEFAULT_CONFIG_DIRS = [
     r"C:\app\power\product\11.2.0\client_1\network\admin",
 ]
 
+# Thick モード用 Instant Client パス候補
+_INSTANT_CLIENT_DIRS = [
+    r"C:\oracle\instantclient",
+    r"C:\oracle\instantclient_11_2",
+]
+
 
 def _find_config_dir() -> str | None:
     """tnsnames.ora が存在するディレクトリを探す."""
@@ -43,6 +49,22 @@ def _find_config_dir() -> str | None:
     return None
 
 
+def _init_thick_mode() -> None:
+    """古い Oracle DB (11g等) に接続するため thick モードを初期化する.
+
+    thin モードは Oracle 12.1+ のみ対応のため、
+    64bit Instant Client を使った thick モードが必要。
+    既に初期化済みの場合は何もしない。
+    """
+    if oracledb.is_thin_mode():
+        for lib_dir in _INSTANT_CLIENT_DIRS:
+            if os.path.isfile(os.path.join(lib_dir, "oci.dll")):
+                oracledb.init_oracle_client(lib_dir=lib_dir)
+                return
+        # パス候補に見つからない場合はlib_dir指定なしで試行（PATH依存）
+        oracledb.init_oracle_client()
+
+
 class PoolManager:
     """ECOとHONPSの2つのコネクションプールを管理するシングルトン."""
 
@@ -53,10 +75,10 @@ class PoolManager:
     def init(cls, eco_cfg: DbConfig, honps_cfg: DbConfig) -> None:
         """起動時に1回だけ呼ぶ。2つのプールを初期化する.
 
-        thinモードで動作。TNS名(例: ORAGOLD)の解決には
-        config_dir で tnsnames.ora の場所を渡す。
-        32bit Oracle Client環境でも動作する。
+        古い Oracle DB (11g) に対応するため thick モードで動作。
+        TNS名(例: ORAGOLD)の解決には config_dir で tnsnames.ora の場所を渡す。
         """
+        _init_thick_mode()
         config_dir = _find_config_dir()
         if cls._eco_pool is None:
             cls._eco_pool = oracledb.create_pool(

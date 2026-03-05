@@ -48,26 +48,16 @@ class PoolManager:
 
     _eco_pool: oracledb.ConnectionPool | None = None
     _honps_pool: oracledb.ConnectionPool | None = None
-    _client_initialized: bool = False
-
-    @classmethod
-    def _ensure_client(cls) -> None:
-        """TNS名解決のため、必要に応じてOracle Clientを初期化する."""
-        if cls._client_initialized:
-            return
-        config_dir = _find_config_dir()
-        if config_dir:
-            try:
-                oracledb.init_oracle_client(config_dir=config_dir)
-            except oracledb.ProgrammingError:
-                # 既に初期化済みの場合は無視
-                pass
-        cls._client_initialized = True
 
     @classmethod
     def init(cls, eco_cfg: DbConfig, honps_cfg: DbConfig) -> None:
-        """起動時に1回だけ呼ぶ。2つのプールを初期化する."""
-        cls._ensure_client()
+        """起動時に1回だけ呼ぶ。2つのプールを初期化する.
+
+        thinモードで動作。TNS名(例: ORAGOLD)の解決には
+        config_dir で tnsnames.ora の場所を渡す。
+        32bit Oracle Client環境でも動作する。
+        """
+        config_dir = _find_config_dir()
         if cls._eco_pool is None:
             cls._eco_pool = oracledb.create_pool(
                 user=eco_cfg.user,
@@ -76,6 +66,7 @@ class PoolManager:
                 min=eco_cfg.pool_min,
                 max=eco_cfg.pool_max,
                 increment=1,
+                config_dir=config_dir,
             )
         if cls._honps_pool is None:
             cls._honps_pool = oracledb.create_pool(
@@ -85,6 +76,7 @@ class PoolManager:
                 min=honps_cfg.pool_min,
                 max=honps_cfg.pool_max,
                 increment=1,
+                config_dir=config_dir,
             )
 
     @classmethod

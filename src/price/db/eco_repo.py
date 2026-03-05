@@ -216,6 +216,24 @@ class EcoRepo:
         return result
 
     @staticmethod
+    def fetch_um_h_sikiri(part_numbers: list[str]) -> dict[str, ShohinBuhin]:
+        """UM番のH仕切りを一括取得（zaiko_kyoten_cd/torisaki_cd条件なし）."""
+        result: dict[str, ShohinBuhin] = {}
+        with PoolManager.eco_conn() as conn:
+            for chunk in chunk_list(part_numbers):
+                ph = make_bind_placeholders(len(chunk))
+                sql = Q.FETCH_UM_H_SIKIRI.format(placeholders=ph)
+                with conn.cursor() as cur:
+                    cur.execute(sql, chunk)
+                    for row in cur:
+                        if row[1]:
+                            result[row[1]] = ShohinBuhin(
+                                shohin_buhin_cd=row[1],
+                                h_sikiri=Decimal(str(row[0])) if row[0] is not None else None,
+                            )
+        return result
+
+    @staticmethod
     def fetch_buhin_kubun(part_numbers: list[str]) -> dict[str, list[str]]:
         """部品区分を一括取得（複数区分をリストで返す）."""
         result: dict[str, list[str]] = defaultdict(list)

@@ -106,6 +106,15 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
     print("  ECO H仕切りを取得中...")
     data["shohin_buhin"] = EcoRepo.fetch_shohin_buhin(part_numbers)
 
+    # 3b. UM番のH仕切り（条件が異なるため別クエリ）
+    um_parts = groups.get(PartPrefix.UM, [])
+    if um_parts:
+        print("  UM番 H仕切りを取得中...")
+        um_shohin = EcoRepo.fetch_um_h_sikiri(um_parts)
+        for pn, sb in um_shohin.items():
+            if pn not in data["shohin_buhin"]:
+                data["shohin_buhin"][pn] = sb
+
     # 4. 部品区分 (全部品)
     print("  部品区分を取得中...")
     data["buhin_kubun"] = EcoRepo.fetch_buhin_kubun(part_numbers)

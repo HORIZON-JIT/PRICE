@@ -24,6 +24,7 @@ INCLUDE = [
     "install.bat",
     "run_web.bat",
     "run_batch.bat",
+    "価格演算システム.vbs",
 ]
 
 # 除外パターン

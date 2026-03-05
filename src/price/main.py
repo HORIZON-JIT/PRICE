@@ -114,7 +114,9 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
 
 def run_batch(input_path: str, output_path: str,
               settings_path: str = "config/settings.yaml",
-              rates_path: str = "config/rates.yaml") -> None:
+              rates_path: str = "config/rates.yaml",
+              rates_excel_path: str | None = None,
+              rates_sheet_name: str = "テーブル") -> None:
     """バッチ処理のメインフロー."""
     print("=" * 60)
     print("価格計算バッチ処理")
@@ -122,7 +124,13 @@ def run_batch(input_path: str, output_path: str,
 
     # 設定読み込み
     print("\n[1/5] 設定ファイル読み込み...")
-    config = load_config(settings_path, rates_path)
+    if rates_excel_path:
+        print(f"  掛率: {rates_excel_path} (シート: {rates_sheet_name})")
+    else:
+        print(f"  掛率: {rates_path}")
+    config = load_config(settings_path, rates_path,
+                         rates_excel_path=rates_excel_path,
+                         rates_sheet_name=rates_sheet_name)
 
     # DB接続プール初期化
     print("[2/5] データベース接続...")
@@ -183,10 +191,16 @@ def main():
     parser.add_argument("--settings", default="config/settings.yaml",
                         help="DB接続設定ファイル (default: config/settings.yaml)")
     parser.add_argument("--rates", default="config/rates.yaml",
-                        help="掛率設定ファイル (default: config/rates.yaml)")
+                        help="掛率設定YAMLファイル (default: config/rates.yaml)")
+    parser.add_argument("--rates-excel",
+                        help="掛率が入ったExcelファイル (「テーブル」シートから読み込み)")
+    parser.add_argument("--rates-sheet", default="テーブル",
+                        help="Excelの掛率シート名 (default: テーブル)")
 
     args = parser.parse_args()
-    run_batch(args.input, args.output, args.settings, args.rates)
+    run_batch(args.input, args.output, args.settings, args.rates,
+              rates_excel_path=args.rates_excel,
+              rates_sheet_name=args.rates_sheet)
 
 
 if __name__ == "__main__":

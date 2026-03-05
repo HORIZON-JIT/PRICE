@@ -4,6 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import yaml
+from openpyxl import load_workbook
 
 
 @dataclass
@@ -78,20 +79,87 @@ def _to_decimal(val) -> Decimal:
     return Decimal(str(val))
 
 
-def load_config(
-    settings_path: str | Path = "config/settings.yaml",
-    rates_path: str | Path = "config/rates.yaml",
-) -> AppConfig:
-    """設定ファイルを読み込んでAppConfigを返す."""
-    with open(settings_path, encoding="utf-8") as f:
-        settings = yaml.safe_load(f)
+def _cell_val(ws, cell_ref) -> Decimal:
+    """Excelシートのセル値をDecimalで取得する.
 
+    Args:
+        ws: openpyxlのワークシート
+        cell_ref: セル参照 (例: "A3", "F10")
+    """
+    val = ws[cell_ref].value
+    if val is None:
+        raise ValueError(f"テーブルシートのセル {cell_ref} が空です。")
+    return Decimal(str(val))
+
+
+def load_rates_from_excel(excel_path: str | Path, sheet_name: str = "テーブル") -> RateConfig:
+    """Excelの「テーブル」シートから掛率を直接読み込む.
+
+    VBAと同じセル位置から値を取得する:
+      A3: UP, B3: チャージ
+      D5: M番価格帯3下限, E3: 価格帯1上限, E4: 価格帯2上限
+      F3~F5: M番掛率M1~M3
+      F10: 4番掛率, F19: E番掛率, F23: P番掛率, F27: A番掛率
+      F32: L番掛率, F36: CV番掛率, F40: UM番掛率
+      F51~F53: HI仕切り変数, F57~F60: 仮上代変数
+      F63: D仕切り変数
+      E71~E72: 上代価格帯, F71~F73: 上代掛率
+    """
+    wb = load_workbook(excel_path, data_only=True)
+    if sheet_name not in wb.sheetnames:
+        raise ValueError(
+            f"シート '{sheet_name}' が見つかりません。"
+            f"利用可能なシート: {wb.sheetnames}"
+        )
+    ws = wb[sheet_name]
+
+    m_band = MBandConfig(
+        band1_threshold=_cell_val(ws, "E3"),
+        band2_threshold=_cell_val(ws, "E4"),
+        band3_threshold=_cell_val(ws, "D5"),
+        rate_M1=_cell_val(ws, "F3"),
+        rate_M2=_cell_val(ws, "F4"),
+        rate_M3=_cell_val(ws, "F5"),
+    )
+
+    price_chain = PriceChainConfig(
+        hi_var1=_cell_val(ws, "F51"),
+        hi_var2=_cell_val(ws, "F52"),
+        hi_var3=_cell_val(ws, "F53"),
+        kari_var1=_cell_val(ws, "F57"),
+        kari_var2=_cell_val(ws, "F58"),
+        kari_var3=_cell_val(ws, "F59"),
+        kari_var4=_cell_val(ws, "F60"),
+        dealer_var1=_cell_val(ws, "F63"),
+        jyoudai_band1=_cell_val(ws, "E71"),
+        jyoudai_band2=_cell_val(ws, "E72"),
+        jyoudai_rate1=_cell_val(ws, "F71"),
+        jyoudai_rate2=_cell_val(ws, "F72"),
+        jyoudai_rate3=_cell_val(ws, "F73"),
+    )
+
+    rate_config = RateConfig(
+        m_band=m_band,
+        rate_4=_cell_val(ws, "F10"),
+        rate_e=_cell_val(ws, "F19"),
+        rate_a=_cell_val(ws, "F27"),
+        rate_l=_cell_val(ws, "F32"),
+        rate_cv=_cell_val(ws, "F36"),
+        rate_um=_cell_val(ws, "F40"),
+        rate_p=_cell_val(ws, "F23"),
+        up_rate=_cell_val(ws, "A3"),
+        charge_rate=_cell_val(ws, "B3"),
+        price_chain=price_chain,
+    )
+
+    wb.close()
+    return rate_config
+
+
+def _load_rates_from_yaml(rates_path: str | Path) -> RateConfig:
+    """YAMLファイルから掛率を読み込む（従来方式）."""
     with open(rates_path, encoding="utf-8") as f:
         rates = yaml.safe_load(f)
-
-    db = settings["database"]
-    eco_db = DbConfig(**db["eco"])
-    honps_db = DbConfig(**db["honps"])
 
     ts = rates["t_sikiri"]
     m = ts["M"]
@@ -123,7 +191,7 @@ def load_config(
         jyoudai_rate3=_to_decimal(pc["jyoudai"]["rate3"]),
     )
 
-    rate_config = RateConfig(
+    return RateConfig(
         m_band=m_band,
         rate_4=_to_decimal(ts["4"]),
         rate_e=_to_decimal(ts["E"]),
@@ -136,6 +204,38 @@ def load_config(
         charge_rate=_to_decimal(mfg["charge_rate"]),
         price_chain=price_chain,
     )
+
+
+def load_config(
+    settings_path: str | Path = "config/settings.yaml",
+    rates_path: str | Path | None = "config/rates.yaml",
+    rates_excel_path: str | Path | None = None,
+    rates_sheet_name: str = "テーブル",
+) -> AppConfig:
+    """設定ファイルを読み込んでAppConfigを返す.
+
+    掛率は以下の優先順位で読み込む:
+      1. rates_excel_path が指定されている → Excelの「テーブル」シートから読み込み
+      2. それ以外 → rates_path (YAML) から読み込み
+
+    Args:
+        settings_path: DB接続等の設定YAMLパス
+        rates_path: 掛率設定YAMLパス (Excelが指定されていない場合に使用)
+        rates_excel_path: 掛率が入ったExcelファイルパス (VBAの「テーブル」シート)
+        rates_sheet_name: Excelのシート名 (default: "テーブル")
+    """
+    with open(settings_path, encoding="utf-8") as f:
+        settings = yaml.safe_load(f)
+
+    db = settings["database"]
+    eco_db = DbConfig(**db["eco"])
+    honps_db = DbConfig(**db["honps"])
+
+    # 掛率の読み込み: Excel優先
+    if rates_excel_path is not None:
+        rate_config = load_rates_from_excel(rates_excel_path, rates_sheet_name)
+    else:
+        rate_config = _load_rates_from_yaml(rates_path)
 
     batch = settings.get("batch", {})
     return AppConfig(

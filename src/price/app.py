@@ -39,7 +39,7 @@ with st.sidebar:
 st.title("価格演算システム")
 
 # ---------- 入力タブ ----------
-tab_excel, tab_manual = st.tabs(["Excelアップロード", "手入力"])
+tab_manual, tab_excel = st.tabs(["手入力", "Excelアップロード"])
 
 with tab_excel:
     uploaded_file = st.file_uploader(

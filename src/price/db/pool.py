@@ -5,6 +5,8 @@ VBAでは各サブルーチンが毎回myCon.Open/myCon.Closeしていたが、
 """
 from __future__ import annotations
 
+import os
+import platform
 from contextlib import contextmanager
 from typing import Generator
 
@@ -12,16 +14,60 @@ import oracledb
 
 from price.config import DbConfig
 
+# Oracle Instant Clientの設定ディレクトリ（tnsnames.ora の場所）
+# 環境変数 TNS_ADMIN > デフォルトパス の優先順位で探索
+_DEFAULT_CONFIG_DIRS = [
+    r"C:\app\power\product\11.2.0\client_1\network\admin",
+]
+
+
+def _find_config_dir() -> str | None:
+    """tnsnames.ora が存在するディレクトリを探す."""
+    # 環境変数が設定済みならそれを使う
+    tns_admin = os.environ.get("TNS_ADMIN")
+    if tns_admin and os.path.isfile(os.path.join(tns_admin, "tnsnames.ora")):
+        return tns_admin
+
+    oracle_home = os.environ.get("ORACLE_HOME")
+    if oracle_home:
+        candidate = os.path.join(oracle_home, "network", "admin")
+        if os.path.isfile(os.path.join(candidate, "tnsnames.ora")):
+            return candidate
+
+    # Windows のデフォルトパスを確認
+    if platform.system() == "Windows":
+        for d in _DEFAULT_CONFIG_DIRS:
+            if os.path.isfile(os.path.join(d, "tnsnames.ora")):
+                return d
+
+    return None
+
 
 class PoolManager:
     """ECOとHONPSの2つのコネクションプールを管理するシングルトン."""
 
     _eco_pool: oracledb.ConnectionPool | None = None
     _honps_pool: oracledb.ConnectionPool | None = None
+    _client_initialized: bool = False
+
+    @classmethod
+    def _ensure_client(cls) -> None:
+        """TNS名解決のため、必要に応じてOracle Clientを初期化する."""
+        if cls._client_initialized:
+            return
+        config_dir = _find_config_dir()
+        if config_dir:
+            try:
+                oracledb.init_oracle_client(config_dir=config_dir)
+            except oracledb.ProgrammingError:
+                # 既に初期化済みの場合は無視
+                pass
+        cls._client_initialized = True
 
     @classmethod
     def init(cls, eco_cfg: DbConfig, honps_cfg: DbConfig) -> None:
         """起動時に1回だけ呼ぶ。2つのプールを初期化する."""
+        cls._ensure_client()
         if cls._eco_pool is None:
             cls._eco_pool = oracledb.create_pool(
                 user=eco_cfg.user,

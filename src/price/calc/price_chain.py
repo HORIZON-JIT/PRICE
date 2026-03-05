@@ -9,8 +9,8 @@ from price.config import PriceChainConfig
 from price.models.enums import PartPrefix, classify_prefix
 from price.models.price_result import PriceResult
 from price.util.rounding import (
-    round_half_up_to_1,
     round_half_up_to_10,
+    round_half_up_to_100,
     roundup_to_10,
 )
 
@@ -61,6 +61,6 @@ class PriceChainCalculator:
             val = kj * self.cfg.jyoudai_rate3
 
         if val >= 1000:
-            result.jyoudai = round_half_up_to_10(val)
+            result.jyoudai = round_half_up_to_100(val)
         else:
-            result.jyoudai = round_half_up_to_1(val)
+            result.jyoudai = round_half_up_to_10(val)

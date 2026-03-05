@@ -36,7 +36,7 @@ price_chain:
     var3: 1.05                 # テーブルシートF59 (4番以外)
     var4: 1.3068               # テーブルシートF60 (4番以外)
   dealer_sikiri:
-    var1: 1.155                # テーブルシートF63
+    var1: 1.1                  # テーブルシートF63 (Ver.8.0: 1.155→1.1)
   jyoudai:
     band1_threshold: 15000     # テーブルシートE71
     band2_threshold: 40000     # テーブルシートE72

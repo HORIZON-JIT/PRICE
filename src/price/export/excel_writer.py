@@ -81,21 +81,21 @@ def _write_import_sheet(ws, results: list[PriceResult]) -> None:
             continue
         # T10000行
         ws.cell(row=row, column=1, value="T10000")
-        ws.cell(row=row, column=3, value="A")
+        ws.cell(row=row, column=3, value=r.zaiko_cd)
         ws.cell(row=row, column=6, value=r.buhin_bango)
         ws.cell(row=row, column=8, value=today)
         ws.cell(row=row, column=9, value=r.t_sikiri)
-        ws.cell(row=row, column=10, value=r.kari_jyoudai)
+        ws.cell(row=row, column=10, value=r.hi_sikiri)
         ws.cell(row=row, column=11, value=r.dealer_sikiri)
         ws.cell(row=row, column=12, value=r.jyoudai)
         row += 1
         # T20000行
         ws.cell(row=row, column=1, value="T20000")
-        ws.cell(row=row, column=3, value="A")
+        ws.cell(row=row, column=3, value=r.zaiko_cd)
         ws.cell(row=row, column=6, value=r.buhin_bango)
         ws.cell(row=row, column=8, value=today)
         ws.cell(row=row, column=9, value=r.t_sikiri)
-        ws.cell(row=row, column=10, value=r.kari_jyoudai)
+        ws.cell(row=row, column=10, value=r.hi_sikiri)
         ws.cell(row=row, column=11, value=0)
         ws.cell(row=row, column=12, value=r.jyoudai)
         row += 1

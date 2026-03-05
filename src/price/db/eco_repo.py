@@ -36,6 +36,7 @@ class EcoRepo:
                             jyoudai=Decimal(str(row[4])) if row[4] is not None else None,
                             jp_buhi_name=row[5] or "",
                             buhinkubun=row[6] or "",
+                            zaiko_cd=row[7] or "",
                         )
                         result[sb.shohin_buhin_cd] = sb
         return result

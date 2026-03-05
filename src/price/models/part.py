@@ -13,6 +13,7 @@ class ShohinBuhin:
     jyoudai: Decimal | None = None
     jp_buhi_name: str = ""
     buhinkubun: str = ""
+    zaiko_cd: str = ""
 
 
 @dataclass

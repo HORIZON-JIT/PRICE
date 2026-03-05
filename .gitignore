@@ -7,3 +7,5 @@ build/
 *.xlsx
 !tests/*.xlsx
 .env
+.venv/
+config/settings.yaml

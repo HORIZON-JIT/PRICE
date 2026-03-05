@@ -1,15 +1,16 @@
 # データベース接続設定
+# ※ 実際の接続情報を記入して settings.yaml として保存してください
 database:
   eco:
-    user: "ECOREAD"
-    password: "ECOread01#"
-    dsn: "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=172.25.3.119)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=orcl.hrz.local)))"
+    user: "YOUR_ECO_USER"
+    password: "YOUR_ECO_PASSWORD"
+    dsn: "hostname:1521/service_name"
     pool_min: 2
     pool_max: 10
   honps:
-    user: "SELECT1"
-    password: "SELECT1"
-    dsn: "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=oracle.horizon.co.jp)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=TAIYO2)))"
+    user: "YOUR_HONPS_USER"
+    password: "YOUR_HONPS_PASSWORD"
+    dsn: "hostname:1521/service_name"
     pool_min: 1
     pool_max: 5
 

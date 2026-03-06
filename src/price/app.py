@@ -155,10 +155,11 @@ with st.sidebar:
         st.markdown("---")
         a_mode_label = st.selectbox(
             "A番組立金額",
-            ["簡易式", "工数反映式"],
+            ["簡易式", "工数反映式", "工数反映式_2026新型"],
             key="a_assembly_mode_select",
         )
-        a_assembly_mode = "kousuu" if a_mode_label == "工数反映式" else "simple"
+        _mode_map = {"簡易式": "simple", "工数反映式": "kousuu", "工数反映式_2026新型": "kousuu_2026"}
+        a_assembly_mode = _mode_map[a_mode_label]
     elif pw:
         st.error("パスワードが違います")
 

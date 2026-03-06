@@ -19,9 +19,11 @@ class HonpsRepo:
 
         honps.hv_ma_ta_hyotanka ビュー経由で取得。
         tan_cost_ko がある場合は tan_cost + tan_cost_ko を使用。
+        ビューで取得できなかった品番は ta_hyotanka (ベーステーブル) からフォールバック取得する。
         """
         result: dict[str, HyotankaRow] = {}
         with PoolManager.honps_conn() as conn:
+            # 1. ビュー (hv_ma_ta_hyotanka) から取得
             for chunk in chunk_list(part_numbers):
                 ph = make_bind_placeholders(len(chunk))
                 sql = Q.FETCH_HYOTANKA.format(placeholders=ph)
@@ -38,6 +40,26 @@ class HonpsRepo:
                             kote_1=row[6] or "",
                         )
                         result[ht.hinban] = ht
+
+            # 2. ビューで取得できなかった品番を ta_hyotanka からフォールバック取得
+            missing = [pn for pn in part_numbers
+                       if pn not in result or result[pn].standard_price is None]
+            if missing:
+                for chunk in chunk_list(missing):
+                    ph = make_bind_placeholders(len(chunk))
+                    sql = Q.FETCH_TA_HYOTANKA.format(placeholders=ph)
+                    with conn.cursor() as cur:
+                        cur.execute(sql, chunk)
+                        for row in cur:
+                            hinban, tan_cost = row[0], row[1]
+                            if tan_cost is not None:
+                                if hinban in result:
+                                    result[hinban].standard_price = Decimal(str(tan_cost))
+                                else:
+                                    result[hinban] = HyotankaRow(
+                                        hinban=hinban,
+                                        standard_price=Decimal(str(tan_cost)),
+                                    )
         return result
 
     @staticmethod

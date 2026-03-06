@@ -48,6 +48,15 @@ class HonpsRepo:
             view_count = len(result)
             view_null = [pn for pn in result if result[pn].standard_price is None]
             debug_info.append(f"[VIEW] 入力: {len(part_numbers)}件, 取得: {view_count}件, 単価NULL: {len(view_null)}件")
+            # キー一致の診断: 入力品番 vs DB返却キーを比較
+            db_keys = [k for k in result if k != "__debug__"]
+            input_set = set(part_numbers)
+            matched = [k for k in db_keys if k in input_set]
+            unmatched = [k for k in db_keys if k not in input_set]
+            debug_info.append(f"[KEY] DB返却キー数: {len(db_keys)}, 入力と一致: {len(matched)}, 不一致: {len(unmatched)}")
+            if unmatched:
+                debug_info.append(f"[KEY] 不一致キー(repr): {[repr(k) for k in unmatched[:5]]}")
+                debug_info.append(f"[KEY] 入力品番(repr): {[repr(pn) for pn in part_numbers[:5]]}")
             if view_null:
                 debug_info.append(f"[VIEW] 単価NULLの品番: {view_null[:10]}")
 

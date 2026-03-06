@@ -65,6 +65,21 @@ def _init_thick_mode() -> None:
         oracledb.init_oracle_client()
 
 
+def _output_type_handler(cursor, metadata):
+    """Oracle CHAR型の末尾スペースパディングを自動トリムする.
+
+    VBAのADODBは自動的にトリムするため問題にならないが、
+    python-oracledbはCHAR型の値をそのまま返す。
+    このハンドラにより、CHAR型カラムの値が自動的にstrip()される。
+    """
+    if metadata.type_code is oracledb.DB_TYPE_CHAR:
+        return cursor.var(
+            str,
+            arraysize=cursor.arraysize,
+            outconverter=lambda val: val.strip() if val else val,
+        )
+
+
 class PoolManager:
     """ECOとHONPSの2つのコネクションプールを管理するシングルトン."""
 
@@ -108,6 +123,7 @@ class PoolManager:
         if cls._eco_pool is None:
             raise RuntimeError("PoolManager未初期化。init()を先に呼んでください。")
         conn = cls._eco_pool.acquire()
+        conn.outputtypehandler = _output_type_handler
         try:
             yield conn
         finally:
@@ -120,6 +136,7 @@ class PoolManager:
         if cls._honps_pool is None:
             raise RuntimeError("PoolManager未初期化。init()を先に呼んでください。")
         conn = cls._honps_pool.acquire()
+        conn.outputtypehandler = _output_type_handler
         try:
             yield conn
         finally:

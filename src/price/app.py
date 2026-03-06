@@ -190,48 +190,18 @@ if "results" in st.session_state:
         return styles
 
     styled_df = df.style.apply(_highlight_rows, axis=1)
-
-    # ---------- 結果テーブル + 詳細選択パネル ----------
     assembly_details = stats.get("assembly_details", {})
     m_details = stats.get("m_details", {})
-    nav_a = [r.buhin_bango for r in results
-             if _is_a_part(r.buhin_bango) and r.buhin_bango in assembly_details]
-    nav_m_top = [r.buhin_bango for r in results
-                 if _is_m_part(r.buhin_bango) and r.buhin_bango in m_details]
-    nav_m_child = [pn for pn in m_details if pn not in set(nav_m_top)]
-    nav_m = nav_m_top + nav_m_child
 
-    has_details = bool(nav_a or nav_m)
-    if has_details:
-        tbl_col, nav_col = st.columns([3, 1])
-    else:
-        tbl_col = st.container()
-
-    with tbl_col:
-        st.dataframe(styled_df, use_container_width=True, height=600)
-
-    if has_details:
-        with nav_col:
-            st.markdown("#### 詳細表示")
-            if nav_a:
-                a_options = ["-- A番を選択 --"] + [
-                    f"{pn} ⚠" if assembly_details.get(pn) and assembly_details[pn].has_null_data else pn
-                    for pn in nav_a
-                ]
-                a_selected = st.selectbox("A番 構成部品", a_options, key="sel_a_detail",
-                                          label_visibility="collapsed")
-                if a_selected != "-- A番を選択 --":
-                    st.session_state["selected_a_detail"] = a_selected.replace(" ⚠", "")
-            if nav_m:
-                m_options = ["-- M番を選択 --"] + [
-                    f"{pn} ({m_details[pn].buhi_mei})" if m_details.get(pn) and m_details[pn].buhi_mei else pn
-                    for pn in nav_m
-                ]
-                m_selected = st.selectbox("M番 工程詳細", m_options, key="sel_m_detail",
-                                          label_visibility="collapsed")
-                if m_selected != "-- M番を選択 --":
-                    pn_selected = m_selected.split(" (")[0]
-                    st.session_state["selected_m_detail"] = pn_selected
+    # ---------- 結果テーブル（行選択で詳細表示） ----------
+    st.caption("A番・M番の行を選択すると詳細が表示されます")
+    event = st.dataframe(
+        styled_df,
+        on_select="rerun",
+        selection_mode="single-row",
+        use_container_width=True,
+        height=600,
+    )
 
     # Excel ダウンロード
     buf = io.BytesIO()
@@ -245,18 +215,24 @@ if "results" in st.session_state:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.document",
     )
 
+    # ---------- 行選択 → 詳細表示 ----------
+    selected_pn = None
+    if event.selection.rows:
+        row_idx = event.selection.rows[0]
+        if row_idx < len(results):
+            selected_pn = results[row_idx].buhin_bango
+
     # ---------- A番 構成部品詳細 ----------
-    selected_a = st.session_state.get("selected_a_detail")
-    if assembly_details and selected_a and selected_a in assembly_details:
+    if selected_pn and _is_a_part(selected_pn) and selected_pn in assembly_details:
         st.markdown("---")
         st.subheader("A番 構成部品詳細")
-        detail = assembly_details[selected_a]
+        detail = assembly_details[selected_pn]
 
         if detail.has_null_data:
-            st.markdown(f"### :red[{selected_a} の構成部品]")
+            st.markdown(f"### :red[{selected_pn} の構成部品]")
             st.warning("構成部品に標準単価が取得できないものがあります。")
         else:
-            st.markdown(f"### {selected_a} の構成部品")
+            st.markdown(f"### {selected_pn} の構成部品")
 
         # サマリー情報
         col1, col2, col3, col4 = st.columns(4)
@@ -269,10 +245,10 @@ if "results" in st.session_state:
         col5.metric("工数(分)", f"{detail.kousuu:,.1f}")
         col6.metric("原価合計", f"{detail.genka_total:,.0f}")
         col7.metric("組立場所", detail.assembly_place or "-")
-        a_result = next((r for r in results if r.buhin_bango == selected_a), None)
+        a_result = next((r for r in results if r.buhin_bango == selected_pn), None)
         col8.metric("A番H仕切", f"{a_result.h_sikiri:,}" if a_result and a_result.h_sikiri else "-")
 
-        # 構成部品テーブル
+        # 構成部品テーブル（行選択でM番工程詳細を表示）
         comp_rows = []
         for comp in detail.components:
             comp_rows.append({
@@ -292,34 +268,37 @@ if "results" in st.session_state:
                 return [""] * len(row_s)
 
             styled_comp = comp_df.style.apply(_highlight_null_comp, axis=1)
-            st.dataframe(styled_comp, use_container_width=True, hide_index=False)
 
-            # A番構成部品内のM番 → セレクトボックスでM番工程詳細へ
-            m_children = [c.buhin_bango for c in detail.components
-                          if _is_m_part(c.buhin_bango)
-                          and c.buhin_bango in m_details]
-            if m_children:
-                m_child_options = ["（選択してください）"] + [
-                    f"{mc} ({m_details[mc].buhi_mei})" if m_details.get(mc) and m_details[mc].buhi_mei else mc
-                    for mc in m_children
-                ]
-                m_child_sel = st.selectbox(
-                    "構成M番の工程詳細を表示",
-                    m_child_options,
-                    key="sel_a_m_child",
+            # M番子部品がある場合は行選択可能に
+            has_m_child = any(_is_m_part(c.buhin_bango) and c.buhin_bango in m_details
+                             for c in detail.components)
+            if has_m_child:
+                st.caption("M番の行を選択すると工程詳細が表示されます")
+                comp_event = st.dataframe(
+                    styled_comp,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    use_container_width=True,
+                    hide_index=False,
                 )
-                if m_child_sel != "（選択してください）":
-                    st.session_state["selected_m_detail"] = m_child_sel.split(" (")[0]
+                # M番子部品選択時 → 工程詳細表示
+                if comp_event.selection.rows:
+                    comp_idx = comp_event.selection.rows[0]
+                    if comp_idx < len(detail.components):
+                        comp_pn = detail.components[comp_idx].buhin_bango
+                        if _is_m_part(comp_pn) and comp_pn in m_details:
+                            selected_pn = comp_pn  # M番詳細表示に流す
+            else:
+                st.dataframe(styled_comp, use_container_width=True, hide_index=False)
         else:
             st.info("構成部品がありません。")
 
     # ---------- M番 工程内容詳細 ----------
-    selected_m = st.session_state.get("selected_m_detail")
-    if m_details and selected_m and selected_m in m_details:
+    if selected_pn and _is_m_part(selected_pn) and selected_pn in m_details:
         st.markdown("---")
         st.subheader("M番 工程内容詳細")
-        detail_m = m_details[selected_m]
-        st.markdown(f"### {selected_m} の工程内容")
+        detail_m = m_details[selected_pn]
+        st.markdown(f"### {selected_pn} の工程内容")
         if detail_m.buhi_mei:
             st.caption(f"部品名: {detail_m.buhi_mei}")
 

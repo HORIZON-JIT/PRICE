@@ -186,14 +186,31 @@ def prefetch_data(
         if "a_assembly_kousuu" in collected:
             data["a_assembly_kousuu"] = collected["a_assembly_kousuu"]
 
-        # M番工程詳細: ECO優先、HONPSでフォールバック
+        # M番工程詳細: ECO工程構造 + HONPS業者コストをプロセスレベルで統合
+        # ECOのv_seizou_viewには業者コスト(gyusyacost)が存在しない
+        # (kakakuhyou は購入品4番用)。HONPSのm_buhinから工程単位で補完する。
         m_buhin: dict = {}
-        if "m_buhin_eco" in collected:
-            m_buhin.update(collected["m_buhin_eco"])
-        if "m_buhin_honps" in collected:
-            for pn, detail in collected["m_buhin_honps"].items():
-                if pn not in m_buhin:
-                    m_buhin[pn] = detail
+        eco_details = collected.get("m_buhin_eco", {})
+        honps_details = collected.get("m_buhin_honps", {})
+
+        for pn in set(list(eco_details.keys()) + list(honps_details.keys())):
+            eco_d = eco_details.get(pn)
+            honps_d = honps_details.get(pn)
+
+            if eco_d and honps_d:
+                # HONPS工程を koutei→MProcessRow でマッピング
+                honps_by_koutei = {p.koutei: p for p in honps_d.processes}
+                for proc in eco_d.processes:
+                    hp = honps_by_koutei.get(proc.koutei)
+                    if hp is not None:
+                        if proc.gyusyacost is None:
+                            proc.gyusyacost = hp.gyusyacost
+                m_buhin[pn] = eco_d
+            elif eco_d:
+                m_buhin[pn] = eco_d
+            else:
+                m_buhin[pn] = honps_d
+
         if m_buhin:
             data["m_buhin"] = m_buhin
 

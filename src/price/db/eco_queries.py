@@ -35,30 +35,19 @@ FETCH_H_SIKIRI_LATEST = """
 # 製造ビュー: M番の工程データ取得
 # VBA: M番_計算(), 親子()
 # NOTE: oya_seiban は '' と '*' の両方にデータが存在するため IN で取得。
-#       業者コスト(tanka)はFETCH_KAKAKUHYOUと同じ e→c 順で取得。
-#       旧実装は d(t_torisaki_hm_mst) 起点の逆順チェーンだったため
-#       sgy_bumon_kbn 欠落で連鎖的にNULLになっていた。
+#       業者コスト(gyusyacost)はECOのkakakuhyouテーブルに存在しない
+#       (kakakuhyouは購入品4番用)。HONPSのm_buhinから工程単位で補完する。
 FETCH_SEIZOU_VIEW = """
     SELECT a.oya_hinban, b.hm_nm_1,
            (a.buhin_juuryou / 1000 * a.juuryou_tanka) AS zairyo_cost,
            a.naigaisaku_kbn, a.ko_hinban,
-           COALESCE(e.torisaki_cd, a.torisaki_cd) AS torisaki_cd,
-           c.tanka AS gaichu_cost,
+           a.torisaki_cd,
            a.dandori_time, a.lot_futai, a.buhin_futai, a.machining_cycle,
            DECODE(a.kizin_kbn, 'HC001', '機', 'HC002', '人') AS kizin_kbn,
            a.line_no, a.oya_line_no
       FROM ecouser.v_seizou_view a
       LEFT JOIN ecouser.t_hm_mst b
         ON a.oya_hinban = b.hinban AND b.seiban IN ('', '*') AND b.end_date = '9999/1/1'
-      LEFT JOIN ecouser.t_kakakuhyou_h_mst e
-        ON a.oya_hinban = e.hinban AND a.ko_hinban = e.koutei_cd
-       AND e.end_date = '9999/1/1' AND e.seiban = '' AND e.sgy_bumon_kbn = ''
-      LEFT JOIN ecouser.t_kakakuhyou_m_mst c
-        ON e.hinban = c.hinban AND e.koutei_cd = c.koutei_cd
-       AND e.sgy_bumon_kbn = c.sgy_bumon_kbn
-       AND e.start_date = c.kkhh_start_date
-       AND e.torisaki_cd = c.torisaki_cd
-       AND c.end_date = '9999/1/1' AND c.seiban = ''
      WHERE a.oya_hinban IN ({placeholders})
        AND a.oya_seiban IN ('', '*')
        AND a.bkj_end_date = '9999/1/1'

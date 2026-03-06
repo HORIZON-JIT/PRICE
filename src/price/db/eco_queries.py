@@ -35,13 +35,14 @@ FETCH_H_SIKIRI_LATEST = """
 # 製造ビュー: M番の工程データ取得
 # VBA: M番_計算(), 親子()
 # NOTE: oya_seiban は '' と '*' の両方にデータが存在するため IN で取得。
-#       torisaki_cd は v_seizou_view 自身のカラムを優先し、
-#       価格表 (t_kakakuhyou_m_mst) から取れた場合はそちらを採用する。
+#       業者コスト(tanka)はFETCH_KAKAKUHYOUと同じ e→c 順で取得。
+#       旧実装は d(t_torisaki_hm_mst) 起点の逆順チェーンだったため
+#       sgy_bumon_kbn 欠落で連鎖的にNULLになっていた。
 FETCH_SEIZOU_VIEW = """
     SELECT a.oya_hinban, b.hm_nm_1,
            (a.buhin_juuryou / 1000 * a.juuryou_tanka) AS zairyo_cost,
            a.naigaisaku_kbn, a.ko_hinban,
-           COALESCE(c.torisaki_cd, a.torisaki_cd) AS torisaki_cd,
+           COALESCE(e.torisaki_cd, a.torisaki_cd) AS torisaki_cd,
            c.tanka AS gaichu_cost,
            a.dandori_time, a.lot_futai, a.buhin_futai, a.machining_cycle,
            DECODE(a.kizin_kbn, 'HC001', '機', 'HC002', '人') AS kizin_kbn,
@@ -49,16 +50,15 @@ FETCH_SEIZOU_VIEW = """
       FROM ecouser.v_seizou_view a
       LEFT JOIN ecouser.t_hm_mst b
         ON a.oya_hinban = b.hinban AND b.seiban IN ('', '*') AND b.end_date = '9999/1/1'
-      LEFT JOIN ecouser.t_torisaki_hm_mst d
-        ON a.oya_hinban = d.hinban AND a.ko_hinban = d.koutei_cd
-       AND d.end_date = '9999/1/1' AND d.seiban IN ('', '*')
       LEFT JOIN ecouser.t_kakakuhyou_h_mst e
         ON a.oya_hinban = e.hinban AND a.ko_hinban = e.koutei_cd
-       AND e.end_date = '9999/1/1' AND e.seiban = '' AND e.torisaki_cd = d.torisaki_cd
+       AND e.end_date = '9999/1/1' AND e.seiban = '' AND e.sgy_bumon_kbn = ''
       LEFT JOIN ecouser.t_kakakuhyou_m_mst c
-        ON a.oya_hinban = c.hinban AND a.ko_hinban = c.koutei_cd
-       AND c.end_date = '9999/1/1' AND c.seiban = '' AND c.torisaki_cd = d.torisaki_cd
-       AND c.kkhh_start_date = e.start_date
+        ON e.hinban = c.hinban AND e.koutei_cd = c.koutei_cd
+       AND e.sgy_bumon_kbn = c.sgy_bumon_kbn
+       AND e.start_date = c.kkhh_start_date
+       AND e.torisaki_cd = c.torisaki_cd
+       AND c.end_date = '9999/1/1' AND c.seiban = ''
      WHERE a.oya_hinban IN ({placeholders})
        AND a.oya_seiban IN ('', '*')
        AND a.bkj_end_date = '9999/1/1'

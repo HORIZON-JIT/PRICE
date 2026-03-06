@@ -432,7 +432,8 @@ if "results" in st.session_state:
         col5, col6, col7, col8 = st.columns(4)
         col5.metric("工数(分)", f"{detail.kousuu:,.1f}")
         col6.metric("単価合計+組立費", f"{detail.genka_total:,.0f}")
-        col7.metric("組立場所", detail.assembly_place or "-")
+        h_sikiri_plus_kumitate = detail.h_sikiri_total + int(detail.kousuu_x_charge) + int(detail.kumitate_gaichuhi)
+        col7.metric("H仕切合計+組立費", f"{h_sikiri_plus_kumitate:,}")
         a_result = next((r for r in results if r.buhin_bango == selected_pn), None)
         col8.metric("A番H仕切", f"{a_result.h_sikiri:,}" if a_result and a_result.h_sikiri else "-")
 

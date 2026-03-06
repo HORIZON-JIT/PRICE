@@ -24,6 +24,9 @@ manufacturing:
   up_rate: 1.29                # テーブルシートA3 (UP)
   charge_rate: 3737            # テーブルシートB3 (チャージ)
 
+# ECO H仕切りとの価格比較 (VBA: Y1セル)
+price_comparison_rate: 1.3
+
 # 価格チェーン (HI仕切→仮上代→D仕切→上代)
 price_chain:
   hi_sikiri:

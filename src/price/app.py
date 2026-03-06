@@ -133,6 +133,7 @@ settings_path = "config/settings.yaml"
 rates_path = "config/rates.yaml"
 rates_excel_path = None
 rates_sheet_name = "テーブル"
+a_assembly_mode = "simple"
 
 with st.sidebar:
     st.markdown("### 設定")
@@ -150,6 +151,14 @@ with st.sidebar:
             rates_excel_path = st.text_input("掛率Excelファイル", value="config/掛率.xlsx")
             rates_sheet_name = st.text_input("シート名", value="テーブル")
             rates_path = None
+
+        st.markdown("---")
+        a_mode_label = st.selectbox(
+            "A番組立金額",
+            ["簡易式", "工数反映式"],
+            key="a_assembly_mode_select",
+        )
+        a_assembly_mode = "kousuu" if a_mode_label == "工数反映式" else "simple"
     elif pw:
         st.error("パスワードが違います")
 
@@ -252,6 +261,7 @@ if run_clicked:
             rates_path,
             rates_excel_path=rates_excel_path,
             rates_sheet_name=rates_sheet_name,
+            a_assembly_mode=a_assembly_mode,
         )
     except Exception as e:
         st.error(f"設定読み込みエラー: {e}")

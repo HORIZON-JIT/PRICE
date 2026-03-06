@@ -3,6 +3,7 @@
 VBAの一括()に対応する中核モジュール。
 """
 from collections import defaultdict
+from decimal import Decimal
 
 from price.calc.a_calc import ACalculator
 from price.calc.base import BaseCalculator
@@ -97,7 +98,6 @@ class PriceDispatcher:
             if sb and sb.h_sikiri is not None:
                 r.h_sikiri_eco = sb.h_sikiri
                 if h_sikiri_adj is not None and r.h_sikiri is not None:
-                    from decimal import Decimal
                     adjusted = int(sb.h_sikiri * Decimal(str(h_sikiri_adj)))
                     r.h_sikiri_eco_adjusted = adjusted
                     if r.h_sikiri >= adjusted:

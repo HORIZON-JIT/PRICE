@@ -68,25 +68,19 @@ class ACalculator(BaseCalculator):
         a_assembly_cost = data.get("a_assembly_cost", {})
         a_assembly_kousuu = data.get("a_assembly_kousuu", {})
         hyotanka = data.get("hyotanka", {})
+        assembly_mode = data.get("a_assembly_mode", "simple")
 
         results = []
         for pn in part_numbers:
             components = a_components.get(pn, [])
-            assembly_cost = a_assembly_cost.get(pn, Decimal("0"))
             kousuu_data = a_assembly_kousuu.get(pn, {})
-
-            # 工数計算 (KIT工程の工数を追加: 241022清野)
-            component_count = max(len(components), 5)  # 最低5部品分
-            dandori_time = kousuu_data.get("dandori_time", Decimal("0"))
-            kousuu_min = dandori_time / 60 + Decimal(str(component_count)) * 2
-            kousuu_x_charge = kousuu_min / 60 * self.rate_cfg.charge_rate
 
             # 構成部品ごとのH仕切り計算
             h_sikiri_total = Decimal("0")
             buhin_total = Decimal("0")
             has_null = False
 
-            # 構成部品の詳細を保持するためコピーを作成
+            from price.models.manufacturing import AssemblyComponent
             detail_components = []
             for comp in components:
                 comp_ht = hyotanka.get(comp.buhin_bango)
@@ -106,8 +100,6 @@ class ACalculator(BaseCalculator):
                 if comp_price is not None:
                     buhin_total += comp.inzuu * comp_price
 
-                # 詳細用に構成部品データを記録
-                from price.models.manufacturing import AssemblyComponent
                 detail_comp = AssemblyComponent(
                     a_bango=pn,
                     buhin_bango=comp.buhin_bango,
@@ -119,16 +111,35 @@ class ACalculator(BaseCalculator):
                 )
                 detail_components.append(detail_comp)
 
-            # A番H仕切合計 = Σ(員数×H仕切) + 工数×チャージ + 社外組立費
-            h_sikiri_sum = h_sikiri_total + kousuu_x_charge + assembly_cost
+            # 組立コスト計算: 方式による分岐
+            component_count = max(len(components), 5)  # 最低5部品分
+            if assembly_mode == "kousuu":
+                # 工数反映式: dandori_time + 部品数×2 で工数計算、社外組立費を加算
+                # VBA: 工数(min) = dandori_time/60 + (部品数)*2
+                #      工数×チャージ = 工数/60 × charge_rate
+                #      原価合計 = 部品合計 + 工数×チャージ + 社外組立費
+                assembly_cost = a_assembly_cost.get(pn, Decimal("0"))
+                dandori_time = kousuu_data.get("dandori_time", Decimal("0"))
+                kousuu_min = dandori_time / 60 + Decimal(str(component_count)) * 2
+                kousuu_x_charge = kousuu_min / 60 * self.rate_cfg.charge_rate
+                cost_addition = kousuu_x_charge + assembly_cost
+            else:
+                # 簡易式: 部品点数のみで工数計算（dandori_time不使用、社外組立費なし）
+                kousuu_min = Decimal(str(component_count)) * 2
+                kousuu_x_charge = kousuu_min / 60 * self.rate_cfg.charge_rate
+                assembly_cost = Decimal("0")
+                cost_addition = kousuu_x_charge
+
+            # A番H仕切合計 = Σ(員数×H仕切) + 組立コスト
+            h_sikiri_sum = h_sikiri_total + cost_addition
 
             # A番H仕切 = roundup(H仕切合計 / 掛率_A, -1)  ※除算
             a_h_sikiri = None
             if h_sikiri_sum > 0:
                 a_h_sikiri = roundup_to_10(h_sikiri_sum / self.rate_cfg.rate_a)
 
-            # 原価合計 = 部品合計 + 工数×チャージ + 社外組立費
-            genka_total = buhin_total + kousuu_x_charge + assembly_cost
+            # 原価合計 = 部品合計 + 組立コスト
+            genka_total = buhin_total + cost_addition
 
             # A番詳細データを保存
             assembly_place = kousuu_data.get("line_cd", "")

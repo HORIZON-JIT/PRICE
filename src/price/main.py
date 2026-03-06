@@ -40,12 +40,27 @@ def read_input_parts(input_path: str | Path) -> list[str]:
     return parts
 
 
-def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
+def prefetch_data(
+    part_numbers: list[str],
+    config: AppConfig,
+    on_progress: callable | None = None,
+) -> dict:
     """Phase 1: 全データを一括プリフェッチする.
 
     VBAでは各行で個別にDB接続・クエリしていた処理を、
     プレフィックス別にグルーピングして一括取得する。
     """
+    # 進捗管理: 固定7ステップ + 計算1ステップ = 合計8ステップ
+    total_steps = 8
+    current_step = 0
+
+    def _step(msg: str) -> None:
+        nonlocal current_step
+        current_step += 1
+        print(f"  {msg}")
+        if on_progress:
+            on_progress(current_step, total_steps, msg)
+
     data: dict = {}
 
     # プレフィックス別に分類
@@ -64,15 +79,15 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
     # 1. HONPS標準単価 (A番以外の全部品)
     non_a_parts = [pn for pn in part_numbers
                    if classify_prefix(pn) != PartPrefix.A]
-    print("  標準単価を取得中...")
+    _step("標準単価を取得中...")
     data["hyotanka"] = HonpsRepo.fetch_hyotanka(non_a_parts)
     # デバッグ情報を取り出し
     data["_hyotanka_debug"] = data["hyotanka"].pop("__debug__", [])
 
     # A番の構成部品の標準単価も取得
     a_parts = groups.get(PartPrefix.A, [])
+    _step("A番構成データを取得中...")
     if a_parts:
-        print("  A番構成データを取得中...")
         data["a_components"] = EcoRepo.fetch_a_components(a_parts)
         # 構成部品の品番を集める
         component_pns = set()
@@ -97,14 +112,14 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
                         m_parts.add(c.buhin_bango)
                 except ValueError:
                     pass
+    _step("M番工程詳細を取得中...")
     if m_parts:
-        print("  M番工程詳細を取得中...")
         data["m_buhin"] = HonpsRepo.fetch_m_buhin(list(m_parts))
 
     # 2. 購入品(4番)の価格
     four_parts = groups.get(PartPrefix.FOUR, [])
+    _step("購入品価格を取得中...")
     if four_parts:
-        print("  購入品価格を取得中...")
         data["kakakuhyou"] = EcoRepo.fetch_kakakuhyou(four_parts)
         # デバッグ情報を取り出し
         data.setdefault("_kakaku_debug", [])
@@ -122,13 +137,13 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
         data["fx_rates"] = fx_rates
 
     # 3. ECO H仕切り (全部品)
-    print("  ECO H仕切りを取得中...")
+    _step("ECO H仕切りを取得中...")
     data["shohin_buhin"] = EcoRepo.fetch_shohin_buhin(part_numbers)
 
     # 3b. UM番のH仕切り（条件が異なるため別クエリ）
     um_parts = groups.get(PartPrefix.UM, [])
+    _step("UM番 H仕切りを取得中...")
     if um_parts:
-        print("  UM番 H仕切りを取得中...")
         um_shohin = EcoRepo.fetch_um_h_sikiri(um_parts)
         for pn, sb in um_shohin.items():
             existing = data["shohin_buhin"].get(pn)
@@ -136,7 +151,7 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
                 data["shohin_buhin"][pn] = sb
 
     # 4. 部品区分 (全部品)
-    print("  部品区分を取得中...")
+    _step("部品区分を取得中...")
     data["buhin_kubun"] = EcoRepo.fetch_buhin_kubun(part_numbers)
 
     return data
@@ -157,22 +172,17 @@ def process_parts(
     Returns:
         (results, stats) stats には fetch_time, calc_time, total, null_count
     """
-    def _progress(step, total, msg):
-        if on_progress:
-            on_progress(step, total, msg)
-
-    _progress(1, 3, "データ取得中...")
     start = time.time()
-    data = prefetch_data(part_numbers, config)
+    data = prefetch_data(part_numbers, config, on_progress=on_progress)
     fetch_time = time.time() - start
 
-    _progress(2, 3, "計算実行中...")
+    # 計算ステップ (step 8/8)
+    if on_progress:
+        on_progress(8, 8, "計算実行中...")
     start = time.time()
     dispatcher = PriceDispatcher(config.rates)
     results = dispatcher.calculate_batch(part_numbers, data)
     calc_time = time.time() - start
-
-    _progress(3, 3, "完了")
 
     null_count = sum(1 for r in results if r.has_null_data)
     # M番詳細: dispatcher経由(トップレベル) + data直接(A番子部品)をマージ

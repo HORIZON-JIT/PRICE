@@ -159,6 +159,13 @@ if "results" in st.session_state:
     col3.metric("データ取得", f"{stats['fetch_time']:.1f}秒")
     col4.metric("計算処理", f"{stats['calc_time']:.1f}秒")
 
+    # 標準単価取得デバッグ情報
+    hyotanka_debug = stats.get("hyotanka_debug", [])
+    if hyotanka_debug:
+        with st.expander("標準単価 取得ログ (デバッグ)"):
+            for line in hyotanka_debug:
+                st.text(line)
+
     # DataFrame 構築
     rows = []
     for r in results:

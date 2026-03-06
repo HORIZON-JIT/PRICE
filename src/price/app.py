@@ -189,7 +189,9 @@ def _is_m_part(buhin_bango: str) -> bool:
 def _clear_inputs():
     """手入力フィールドとアップロードファイルをクリアする."""
     st.session_state["manual_input_area"] = ""
-    st.session_state["excel_uploader"] = None
+    # file_uploader は session_state から直接クリアできないため、
+    # キーサフィックスをインクリメントしてウィジェットを再生成する
+    st.session_state["uploader_key"] = st.session_state.get("uploader_key", 0) + 1
     if "results" in st.session_state:
         del st.session_state["results"]
     if "stats" in st.session_state:
@@ -197,13 +199,15 @@ def _clear_inputs():
 
 
 # ---------- 入力タブ ----------
+_uploader_key = st.session_state.get("uploader_key", 0)
+
 tab_manual, tab_excel = st.tabs(["📝 手入力", "📁 Excelアップロード"])
 
 with tab_excel:
     uploaded_file = st.file_uploader(
         "品番リスト（A列に品番、1行目ヘッダー）",
         type=["xlsx"],
-        key="excel_uploader",
+        key=f"excel_uploader_{_uploader_key}",
     )
 
 with tab_manual:

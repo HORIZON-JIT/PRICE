@@ -178,14 +178,17 @@ if "results" in st.session_state:
 
         std_price = row_series.get("標準単価")
         if std_price is None or std_price == 0:
-            styles[idx["品番"]] = styles[idx["品番"]] + "; background-color: #FFFF00" if styles[idx["品番"]] else "background-color: #FFFF00"
-            styles[idx["標準単価"]] = styles[idx["標準単価"]] + "; background-color: #FFFF00" if styles[idx["標準単価"]] else "background-color: #FFFF00"
+            bg_yellow = "background-color: #FFFF00; color: #000000"
+            styles[idx["品番"]] = styles[idx["品番"]] + "; " + bg_yellow if styles[idx["品番"]] else bg_yellow
+            styles[idx["標準単価"]] = styles[idx["標準単価"]] + "; " + bg_yellow if styles[idx["標準単価"]] else bg_yellow
 
         flag = row_series.get("価格比較")
         if flag == "高":
-            styles[idx["H仕切り"]] = styles[idx["H仕切り"]] + "; background-color: #FFFF00" if styles[idx["H仕切り"]] else "background-color: #FFFF00"
+            hi_style = "background-color: #FFFF00; color: #000000"
+            styles[idx["H仕切り"]] = styles[idx["H仕切り"]] + "; " + hi_style if styles[idx["H仕切り"]] else hi_style
         elif flag == "安":
-            styles[idx["H仕切り"]] = styles[idx["H仕切り"]] + "; background-color: #00FFFF" if styles[idx["H仕切り"]] else "background-color: #00FFFF"
+            lo_style = "background-color: #00FFFF; color: #000000"
+            styles[idx["H仕切り"]] = styles[idx["H仕切り"]] + "; " + lo_style if styles[idx["H仕切り"]] else lo_style
 
         return styles
 

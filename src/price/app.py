@@ -192,6 +192,39 @@ if "results" in st.session_state:
     styled_df = df.style.apply(_highlight_rows, axis=1)
     st.dataframe(styled_df, use_container_width=True, height=600)
 
+    # ---------- 詳細表示セレクトボックス ----------
+    assembly_details = stats.get("assembly_details", {})
+    m_details = stats.get("m_details", {})
+    nav_a = [r.buhin_bango for r in results
+             if _is_a_part(r.buhin_bango) and r.buhin_bango in assembly_details]
+    nav_m_top = [r.buhin_bango for r in results
+                 if _is_m_part(r.buhin_bango) and r.buhin_bango in m_details]
+    nav_m_child = [pn for pn in m_details if pn not in set(nav_m_top)]
+    nav_m = nav_m_top + nav_m_child
+
+    if nav_a or nav_m:
+        sel_col1, sel_col2 = st.columns(2)
+        with sel_col1:
+            if nav_a:
+                a_options = ["（選択してください）"] + [
+                    f"{pn} ⚠" if assembly_details.get(pn) and assembly_details[pn].has_null_data else pn
+                    for pn in nav_a
+                ]
+                a_selected = st.selectbox("A番 構成部品詳細", a_options, key="sel_a_detail")
+                if a_selected != "（選択してください）":
+                    st.session_state["selected_a_detail"] = a_selected.replace(" ⚠", "")
+        with sel_col2:
+            if nav_m:
+                m_options = ["（選択してください）"] + [
+                    f"{pn} ({m_details[pn].buhi_mei})" if m_details.get(pn) and m_details[pn].buhi_mei else pn
+                    for pn in nav_m
+                ]
+                m_selected = st.selectbox("M番 工程内容詳細", m_options, key="sel_m_detail")
+                if m_selected != "（選択してください）":
+                    # 品番部分を抽出（括弧付き部品名を除去）
+                    pn_selected = m_selected.split(" (")[0]
+                    st.session_state["selected_m_detail"] = pn_selected
+
     # Excel ダウンロード
     buf = io.BytesIO()
     write_results(results, buf)
@@ -205,156 +238,101 @@ if "results" in st.session_state:
     )
 
     # ---------- A番 構成部品詳細 ----------
-    assembly_details = stats.get("assembly_details", {})
-    if assembly_details:
+    selected_a = st.session_state.get("selected_a_detail")
+    if assembly_details and selected_a and selected_a in assembly_details:
         st.markdown("---")
         st.subheader("A番 構成部品詳細")
+        detail = assembly_details[selected_a]
 
-        # A番の品番リストを作成
-        a_parts = [r.buhin_bango for r in results
-                    if _is_a_part(r.buhin_bango) and r.buhin_bango in assembly_details]
+        if detail.has_null_data:
+            st.markdown(f"### :red[{selected_a} の構成部品]")
+            st.warning("構成部品に標準単価が取得できないものがあります。")
+        else:
+            st.markdown(f"### {selected_a} の構成部品")
 
-        if a_parts:
-            # 各A番に詳細表示ボタンを配置
-            cols_per_row = 4
-            for i in range(0, len(a_parts), cols_per_row):
-                cols = st.columns(cols_per_row)
-                for j, col in enumerate(cols):
-                    idx = i + j
-                    if idx < len(a_parts):
-                        pn = a_parts[idx]
-                        detail_info = assembly_details.get(pn)
-                        has_warn = detail_info and detail_info.has_null_data
-                        label = f"⚠ 詳細表示: {pn}" if has_warn else f"詳細表示: {pn}"
-                        btn_type = "primary" if has_warn else "secondary"
-                        if col.button(label, key=f"detail_{pn}",
-                                      use_container_width=True, type=btn_type):
-                            st.session_state["selected_a_detail"] = pn
+        # サマリー情報
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("部品合計", f"{detail.buhin_total:,.0f}")
+        col2.metric("H仕切合計", f"{detail.h_sikiri_total:,}")
+        col3.metric("工数×チャージ", f"{detail.kousuu_x_charge:,.0f}")
+        col4.metric("社外組立費", f"{detail.kumitate_gaichuhi:,.0f}")
 
-            # 選択中のA番の詳細を表示
-            selected_a = st.session_state.get("selected_a_detail")
-            if selected_a and selected_a in assembly_details:
-                detail = assembly_details[selected_a]
+        col5, col6, col7, col8 = st.columns(4)
+        col5.metric("工数(分)", f"{detail.kousuu:,.1f}")
+        col6.metric("原価合計", f"{detail.genka_total:,.0f}")
+        col7.metric("組立場所", detail.assembly_place or "-")
+        a_result = next((r for r in results if r.buhin_bango == selected_a), None)
+        col8.metric("A番H仕切", f"{a_result.h_sikiri:,}" if a_result and a_result.h_sikiri else "-")
 
-                if detail.has_null_data:
-                    st.markdown(
-                        f"### :red[{selected_a} の構成部品]")
-                    st.warning("構成部品に標準単価が取得できないものがあります。")
-                else:
-                    st.markdown(f"### {selected_a} の構成部品")
+        # 構成部品テーブル
+        comp_rows = []
+        for comp in detail.components:
+            comp_rows.append({
+                "部品番号": comp.buhin_bango,
+                "員数": int(comp.inzuu),
+                "単価": float(comp.tanka) if comp.tanka is not None else None,
+                "H仕切り": comp.h_sikiri,
+                "H仕切り×員数": comp.h_sikiri_x_inzuu,
+                "部品名": comp.buhin_name,
+            })
+        if comp_rows:
+            comp_df = pd.DataFrame(comp_rows)
 
-                # サマリー情報
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric("部品合計", f"{detail.buhin_total:,.0f}")
-                col2.metric("H仕切合計", f"{detail.h_sikiri_total:,}")
-                col3.metric("工数×チャージ", f"{detail.kousuu_x_charge:,.0f}")
-                col4.metric("社外組立費", f"{detail.kumitate_gaichuhi:,.0f}")
+            def _highlight_null_comp(row_s: pd.Series) -> list[str]:
+                if row_s.get("単価") is None or row_s.get("H仕切り") is None:
+                    return ["color: #FF0000"] * len(row_s)
+                return [""] * len(row_s)
 
-                col5, col6, col7, col8 = st.columns(4)
-                col5.metric("工数(分)", f"{detail.kousuu:,.1f}")
-                col6.metric("原価合計", f"{detail.genka_total:,.0f}")
-                col7.metric("組立場所", detail.assembly_place or "-")
-                a_result = next((r for r in results if r.buhin_bango == selected_a), None)
-                col8.metric("A番H仕切", f"{a_result.h_sikiri:,}" if a_result and a_result.h_sikiri else "-")
+            styled_comp = comp_df.style.apply(_highlight_null_comp, axis=1)
+            st.dataframe(styled_comp, use_container_width=True, hide_index=False)
 
-                # 構成部品テーブル
-                comp_rows = []
-                for comp in detail.components:
-                    comp_rows.append({
-                        "部品番号": comp.buhin_bango,
-                        "員数": int(comp.inzuu),
-                        "単価": float(comp.tanka) if comp.tanka is not None else None,
-                        "H仕切り": comp.h_sikiri,
-                        "H仕切り×員数": comp.h_sikiri_x_inzuu,
-                        "部品名": comp.buhin_name,
-                    })
-                if comp_rows:
-                    comp_df = pd.DataFrame(comp_rows)
-
-                    def _highlight_null_comp(row_s: pd.Series) -> list[str]:
-                        if row_s.get("単価") is None or row_s.get("H仕切り") is None:
-                            return ["color: #FF0000"] * len(row_s)
-                        return [""] * len(row_s)
-
-                    styled_comp = comp_df.style.apply(_highlight_null_comp, axis=1)
-                    st.dataframe(styled_comp, use_container_width=True, hide_index=False)
-
-                    # A番構成部品内のM番 → 工程詳細表示ボタン
-                    m_details = stats.get("m_details", {})
-                    m_children = [c.buhin_bango for c in detail.components
-                                  if _is_m_part(c.buhin_bango)
-                                  and c.buhin_bango in m_details]
-                    if m_children:
-                        st.markdown("**構成M番の工程詳細:**")
-                        m_cols = st.columns(min(len(m_children), 4))
-                        for mi, mc in enumerate(m_children):
-                            col_idx = mi % 4
-                            if m_cols[col_idx].button(
-                                f"工程詳細: {mc}",
-                                key=f"a_m_detail_{selected_a}_{mc}",
-                                use_container_width=True,
-                            ):
-                                st.session_state["selected_m_detail"] = mc
-                else:
-                    st.info("構成部品がありません。")
+            # A番構成部品内のM番 → セレクトボックスでM番工程詳細へ
+            m_children = [c.buhin_bango for c in detail.components
+                          if _is_m_part(c.buhin_bango)
+                          and c.buhin_bango in m_details]
+            if m_children:
+                m_child_options = ["（選択してください）"] + [
+                    f"{mc} ({m_details[mc].buhi_mei})" if m_details.get(mc) and m_details[mc].buhi_mei else mc
+                    for mc in m_children
+                ]
+                m_child_sel = st.selectbox(
+                    "構成M番の工程詳細を表示",
+                    m_child_options,
+                    key="sel_a_m_child",
+                )
+                if m_child_sel != "（選択してください）":
+                    st.session_state["selected_m_detail"] = m_child_sel.split(" (")[0]
+        else:
+            st.info("構成部品がありません。")
 
     # ---------- M番 工程内容詳細 ----------
-    m_details = stats.get("m_details", {})
-    if m_details:
+    selected_m = st.session_state.get("selected_m_detail")
+    if m_details and selected_m and selected_m in m_details:
         st.markdown("---")
         st.subheader("M番 工程内容詳細")
+        detail_m = m_details[selected_m]
+        st.markdown(f"### {selected_m} の工程内容")
+        if detail_m.buhi_mei:
+            st.caption(f"部品名: {detail_m.buhi_mei}")
 
-        # M番品番リスト (トップレベル + A番子部品)
-        m_parts_in_results = [r.buhin_bango for r in results
-                              if _is_m_part(r.buhin_bango)
-                              and r.buhin_bango in m_details]
-        # A番子部品のM番（トップレベルに含まれないもの）
-        m_from_assembly = [pn for pn in m_details
-                           if pn not in set(m_parts_in_results)]
-        all_m_parts = m_parts_in_results + m_from_assembly
-
-        if all_m_parts:
-            cols_per_row = 4
-            for i in range(0, len(all_m_parts), cols_per_row):
-                cols = st.columns(cols_per_row)
-                for j, col in enumerate(cols):
-                    idx = i + j
-                    if idx < len(all_m_parts):
-                        pn = all_m_parts[idx]
-                        detail_m = m_details.get(pn)
-                        label = f"工程詳細: {pn}"
-                        if detail_m and detail_m.buhi_mei:
-                            label += f" ({detail_m.buhi_mei})"
-                        if col.button(label, key=f"m_detail_{pn}",
-                                      use_container_width=True):
-                            st.session_state["selected_m_detail"] = pn
-
-        # 選択中のM番の工程詳細を表示
-        selected_m = st.session_state.get("selected_m_detail")
-        if selected_m and selected_m in m_details:
-            detail_m = m_details[selected_m]
-            st.markdown(f"### {selected_m} の工程内容")
-            if detail_m.buhi_mei:
-                st.caption(f"部品名: {detail_m.buhi_mei}")
-
-            proc_rows = []
-            for proc in detail_m.processes:
-                proc_rows.append({
-                    "工程順": proc.kote_jun,
-                    "工程": proc.koutei,
-                    "加": proc.ka,
-                    "半": proc.han,
-                    "業者": proc.gyusya,
-                    "業者コスト": float(proc.gyusyacost) if proc.gyusyacost is not None else None,
-                    "段取時間": float(proc.in_plan_t) if proc.in_plan_t is not None else None,
-                    "LOT付帯": float(proc.lot_inc_t) if proc.lot_inc_t is not None else None,
-                    "部品付帯": float(proc.buh_inc_t) if proc.buh_inc_t is not None else None,
-                    "加工サイクル": float(proc.kakou_cycle_t) if proc.kakou_cycle_t is not None else None,
-                    "機人": proc.kijin_flg,
-                    "材料費": float(proc.zairyo_cost) if proc.zairyo_cost is not None else None,
-                })
-            if proc_rows:
-                proc_df = pd.DataFrame(proc_rows)
-                st.dataframe(proc_df, use_container_width=True, hide_index=True)
-            else:
-                st.info("工程データがありません。")
+        proc_rows = []
+        for proc in detail_m.processes:
+            proc_rows.append({
+                "工程順": proc.kote_jun,
+                "工程": proc.koutei,
+                "課": proc.ka,
+                "班": proc.han,
+                "業者": proc.gyusya,
+                "業者コスト": float(proc.gyusyacost) if proc.gyusyacost is not None else None,
+                "段取時間": float(proc.in_plan_t) if proc.in_plan_t is not None else None,
+                "LOT付帯": float(proc.lot_inc_t) if proc.lot_inc_t is not None else None,
+                "部品付帯": float(proc.buh_inc_t) if proc.buh_inc_t is not None else None,
+                "加工サイクル": float(proc.kakou_cycle_t) if proc.kakou_cycle_t is not None else None,
+                "機人": proc.kijin_flg,
+                "材料費": float(proc.zairyo_cost) if proc.zairyo_cost is not None else None,
+            })
+        if proc_rows:
+            proc_df = pd.DataFrame(proc_rows)
+            st.dataframe(proc_df, use_container_width=True, hide_index=True)
+        else:
+            st.info("工程データがありません。")

@@ -135,6 +135,7 @@ def prefetch_data(
                 executor.submit(EcoRepo.fetch_a_assembly_kousuu, a_parts)))
 
         # M番工程詳細 (トップレベル + A番構成部品内のM番)
+        # VBAと同じ流れ: ECO (M番_計算) → HONPS (H_M番_計算) フォールバック
         m_parts = set(groups.get(PartPrefix.M, []))
         if a_parts and "a_components" in data:
             for comps in data["a_components"].values():
@@ -145,8 +146,11 @@ def prefetch_data(
                     except ValueError:
                         pass
         if m_parts:
-            futures.append(("m_buhin",
-                executor.submit(HonpsRepo.fetch_m_buhin, list(m_parts))))
+            m_parts_list = list(m_parts)
+            futures.append(("m_buhin_eco",
+                executor.submit(EcoRepo.fetch_m_details, m_parts_list)))
+            futures.append(("m_buhin_honps",
+                executor.submit(HonpsRepo.fetch_m_buhin, m_parts_list)))
 
         # 外貨レート（バッチ取得）
         if four_parts and "kakakuhyou" in data:
@@ -164,19 +168,34 @@ def prefetch_data(
                 executor.submit(EcoRepo.fetch_um_h_sikiri, um_parts)))
 
         # 結果回収
+        collected: dict[str, object] = {}
         for key, fut in futures:
-            result = fut.result()
-            if key == "comp_hyotanka":
-                data["hyotanka"].update(result)
-            elif key == "um_shohin":
-                for pn, sb in result.items():
-                    existing = data["shohin_buhin"].get(pn)
-                    if existing is None or existing.h_sikiri is None:
-                        data["shohin_buhin"][pn] = sb
-            elif key == "fx_rates":
-                data["fx_rates"] = result
-            else:
-                data[key] = result
+            collected[key] = fut.result()
+
+        if "comp_hyotanka" in collected:
+            data["hyotanka"].update(collected["comp_hyotanka"])
+        if "um_shohin" in collected:
+            for pn, sb in collected["um_shohin"].items():
+                existing = data["shohin_buhin"].get(pn)
+                if existing is None or existing.h_sikiri is None:
+                    data["shohin_buhin"][pn] = sb
+        if "fx_rates" in collected:
+            data["fx_rates"] = collected["fx_rates"]
+        if "a_assembly_cost" in collected:
+            data["a_assembly_cost"] = collected["a_assembly_cost"]
+        if "a_assembly_kousuu" in collected:
+            data["a_assembly_kousuu"] = collected["a_assembly_kousuu"]
+
+        # M番工程詳細: ECO優先、HONPSでフォールバック
+        m_buhin: dict = {}
+        if "m_buhin_eco" in collected:
+            m_buhin.update(collected["m_buhin_eco"])
+        if "m_buhin_honps" in collected:
+            for pn, detail in collected["m_buhin_honps"].items():
+                if pn not in m_buhin:
+                    m_buhin[pn] = detail
+        if m_buhin:
+            data["m_buhin"] = m_buhin
 
     return data
 

@@ -424,14 +424,14 @@ if "results" in st.session_state:
 
         # サマリー情報
         col1, col2, col3, col4 = st.columns(4)
-        col1.metric("部品合計", f"{detail.buhin_total:,.0f}")
+        col1.metric("単価合計", f"{detail.buhin_total:,.0f}")
         col2.metric("H仕切合計", f"{detail.h_sikiri_total:,}")
         col3.metric("工数×チャージ", f"{detail.kousuu_x_charge:,.0f}")
         col4.metric("社外組立費", f"{detail.kumitate_gaichuhi:,.0f}")
 
         col5, col6, col7, col8 = st.columns(4)
         col5.metric("工数(分)", f"{detail.kousuu:,.1f}")
-        col6.metric("原価合計", f"{detail.genka_total:,.0f}")
+        col6.metric("単価合計+組立費", f"{detail.genka_total:,.0f}")
         col7.metric("組立場所", detail.assembly_place or "-")
         a_result = next((r for r in results if r.buhin_bango == selected_pn), None)
         col8.metric("A番H仕切", f"{a_result.h_sikiri:,}" if a_result and a_result.h_sikiri else "-")

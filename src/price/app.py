@@ -449,6 +449,16 @@ if "results" in st.session_state:
             })
         if comp_rows:
             comp_df = pd.DataFrame(comp_rows)
+            # 合計行を追加
+            sum_row = {
+                "部品番号": "",
+                "員数": "",
+                "単価": comp_df["単価"].sum(),
+                "H仕切り": comp_df["H仕切り"].sum(),
+                "H仕切り×員数": comp_df["H仕切り×員数"].sum(),
+                "部品名": "",
+            }
+            comp_df = pd.concat([comp_df, pd.DataFrame([sum_row])], ignore_index=True)
 
             def _highlight_null_comp(row_s: pd.Series) -> list[str]:
                 if row_s.get("単価") is None or row_s.get("H仕切り") is None:

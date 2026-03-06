@@ -19,21 +19,33 @@ from price.models.enums import PartPrefix, classify_prefix
 # ---------- ページ設定 ----------
 st.set_page_config(page_title="価格演算", layout="wide")
 
-# ---------- サイドバー: 設定 ----------
+# ---------- サイドバー: 設定（パスワード保護） ----------
+_SETTINGS_PASS = "0018"
+
+# デフォルト値（パスワード未入力時に使用）
+settings_path = "config/settings.yaml"
+rates_path = "config/rates.yaml"
+rates_excel_path = None
+rates_sheet_name = "テーブル"
+
 with st.sidebar:
-    st.header("設定")
+    pw = st.text_input("設定パスワード", type="password", key="sidebar_pw")
+    if pw == _SETTINGS_PASS:
+        st.header("設定")
 
-    settings_path = st.text_input("DB設定ファイル", value="config/settings.yaml")
+        settings_path = st.text_input("DB設定ファイル", value="config/settings.yaml")
 
-    rate_source = st.radio("掛率ソース", ["YAML", "Excel"])
-    if rate_source == "YAML":
-        rates_path = st.text_input("掛率YAML", value="config/rates.yaml")
-        rates_excel_path = None
-        rates_sheet_name = "テーブル"
-    else:
-        rates_excel_path = st.text_input("掛率Excelファイル", value="config/掛率.xlsx")
-        rates_sheet_name = st.text_input("シート名", value="テーブル")
-        rates_path = None
+        rate_source = st.radio("掛率ソース", ["YAML", "Excel"])
+        if rate_source == "YAML":
+            rates_path = st.text_input("掛率YAML", value="config/rates.yaml")
+            rates_excel_path = None
+            rates_sheet_name = "テーブル"
+        else:
+            rates_excel_path = st.text_input("掛率Excelファイル", value="config/掛率.xlsx")
+            rates_sheet_name = st.text_input("シート名", value="テーブル")
+            rates_path = None
+    elif pw:
+        st.error("パスワードが違います")
 
 # ---------- メインエリア ----------
 st.title("価格演算システム")

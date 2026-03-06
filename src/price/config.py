@@ -72,6 +72,7 @@ class AppConfig:
     chunk_size: int = 999
     max_depth: int = 10
     history_days: int = 365
+    a_assembly_mode: str = "simple"  # "simple"=簡易式, "tan_cost"=工数反映式
 
 
 def _to_decimal(val) -> Decimal:
@@ -220,6 +221,7 @@ def load_config(
     rates_path: str | Path | None = "config/rates.yaml",
     rates_excel_path: str | Path | None = None,
     rates_sheet_name: str = "テーブル",
+    a_assembly_mode: str = "simple",
 ) -> AppConfig:
     """設定ファイルを読み込んでAppConfigを返す.
 
@@ -232,6 +234,7 @@ def load_config(
         rates_path: 掛率設定YAMLパス (Excelが指定されていない場合に使用)
         rates_excel_path: 掛率が入ったExcelファイルパス (VBAの「テーブル」シート)
         rates_sheet_name: Excelのシート名 (default: "テーブル")
+        a_assembly_mode: A番組立金額の計算方式 ("simple"=簡易式, "tan_cost"=工数反映式)
     """
     with open(settings_path, encoding="utf-8") as f:
         settings = yaml.safe_load(f)
@@ -254,4 +257,5 @@ def load_config(
         chunk_size=batch.get("chunk_size", 999),
         max_depth=batch.get("max_depth", 10),
         history_days=batch.get("manufacturing", {}).get("history_days", 365),
+        a_assembly_mode=a_assembly_mode,
     )

@@ -217,6 +217,9 @@ def prefetch_data(
     # ECO H仕切り比較用掛率 (VBA: Y1セル)
     data["h_sikiri_adjustment"] = config.rates.price_comparison_rate
 
+    # A番組立金額の計算方式
+    data["a_assembly_mode"] = config.a_assembly_mode
+
     return data
 
 

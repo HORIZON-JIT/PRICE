@@ -214,6 +214,9 @@ def prefetch_data(
         if m_buhin:
             data["m_buhin"] = m_buhin
 
+    # ECO H仕切り比較用掛率 (VBA: Y1セル)
+    data["h_sikiri_adjustment"] = config.rates.price_comparison_rate
+
     return data
 
 

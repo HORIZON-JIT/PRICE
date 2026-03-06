@@ -60,6 +60,7 @@ class RateConfig:
     up_rate: Decimal
     charge_rate: Decimal
     price_chain: PriceChainConfig
+    price_comparison_rate: Decimal = Decimal("1.3")  # ECO H仕切り比較用掛率 (VBA: Y1)
 
 
 @dataclass
@@ -138,6 +139,10 @@ def load_rates_from_excel(excel_path: str | Path, sheet_name: str = "テーブ�
         jyoudai_rate3=_cell_val(ws, "F73"),
     )
 
+    # Y1: ECO H仕切り比較用掛率 (セルが空ならデフォルト1.3)
+    y1_val = ws["Y1"].value
+    pcr = Decimal(str(y1_val)) if y1_val is not None else Decimal("1.3")
+
     rate_config = RateConfig(
         m_band=m_band,
         rate_4=_cell_val(ws, "F10"),
@@ -150,6 +155,7 @@ def load_rates_from_excel(excel_path: str | Path, sheet_name: str = "テーブ�
         up_rate=_cell_val(ws, "A3"),
         charge_rate=_cell_val(ws, "B3"),
         price_chain=price_chain,
+        price_comparison_rate=pcr,
     )
 
     wb.close()
@@ -191,6 +197,8 @@ def _load_rates_from_yaml(rates_path: str | Path) -> RateConfig:
         jyoudai_rate3=_to_decimal(pc["jyoudai"]["rate3"]),
     )
 
+    pcr = rates.get("price_comparison_rate", 1.3)
+
     return RateConfig(
         m_band=m_band,
         rate_4=_to_decimal(ts["4"]),
@@ -203,6 +211,7 @@ def _load_rates_from_yaml(rates_path: str | Path) -> RateConfig:
         up_rate=_to_decimal(mfg["up_rate"]),
         charge_rate=_to_decimal(mfg["charge_rate"]),
         price_chain=price_chain,
+        price_comparison_rate=_to_decimal(pcr),
     )
 
 

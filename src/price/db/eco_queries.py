@@ -34,19 +34,24 @@ FETCH_H_SIKIRI_LATEST = """
 
 # 製造ビュー: M番の工程データ取得
 # VBA: M番_計算(), 親子()
+# NOTE: oya_seiban は '' と '*' の両方にデータが存在するため IN で取得。
+#       torisaki_cd は v_seizou_view 自身のカラムを優先し、
+#       価格表 (t_kakakuhyou_m_mst) から取れた場合はそちらを採用する。
 FETCH_SEIZOU_VIEW = """
     SELECT a.oya_hinban, b.hm_nm_1,
            (a.buhin_juuryou / 1000 * a.juuryou_tanka) AS zairyo_cost,
-           a.naigaisaku_kbn, a.ko_hinban, c.torisaki_cd, c.tanka AS gaichu_cost,
+           a.naigaisaku_kbn, a.ko_hinban,
+           COALESCE(c.torisaki_cd, a.torisaki_cd) AS torisaki_cd,
+           c.tanka AS gaichu_cost,
            a.dandori_time, a.lot_futai, a.buhin_futai, a.machining_cycle,
            DECODE(a.kizin_kbn, 'HC001', '機', 'HC002', '人') AS kizin_kbn,
            a.line_no, a.oya_line_no
       FROM ecouser.v_seizou_view a
       LEFT JOIN ecouser.t_hm_mst b
-        ON a.oya_hinban = b.hinban AND b.seiban = '' AND b.end_date = '9999/1/1'
+        ON a.oya_hinban = b.hinban AND b.seiban IN ('', '*') AND b.end_date = '9999/1/1'
       LEFT JOIN ecouser.t_torisaki_hm_mst d
         ON a.oya_hinban = d.hinban AND a.ko_hinban = d.koutei_cd
-       AND d.end_date = '9999/1/1' AND d.seiban = ''
+       AND d.end_date = '9999/1/1' AND d.seiban IN ('', '*')
       LEFT JOIN ecouser.t_kakakuhyou_h_mst e
         ON a.oya_hinban = e.hinban AND a.ko_hinban = e.koutei_cd
        AND e.end_date = '9999/1/1' AND e.seiban = '' AND e.torisaki_cd = d.torisaki_cd
@@ -55,7 +60,7 @@ FETCH_SEIZOU_VIEW = """
        AND c.end_date = '9999/1/1' AND c.seiban = '' AND c.torisaki_cd = d.torisaki_cd
        AND c.kkhh_start_date = e.start_date
      WHERE a.oya_hinban IN ({placeholders})
-       AND a.oya_seiban = ''
+       AND a.oya_seiban IN ('', '*')
        AND a.bkj_end_date = '9999/1/1'
        AND a.ko_data_kbn = 'PC003'
      ORDER BY a.oya_hinban, a.oya_line_no DESC

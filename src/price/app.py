@@ -331,32 +331,35 @@ if "results" in st.session_state:
             st.info("構成部品がありません。")
 
     # ---------- M番 工程内容詳細 ----------
-    if selected_pn and _is_m_part(selected_pn) and selected_pn in m_details:
+    if selected_pn and _is_m_part(selected_pn):
         st.markdown("---")
         st.subheader("M番 工程内容詳細")
-        detail_m = m_details[selected_pn]
-        st.markdown(f"### {selected_pn} の工程内容")
-        if detail_m.buhi_mei:
-            st.caption(f"部品名: {detail_m.buhi_mei}")
+        if selected_pn in m_details:
+            detail_m = m_details[selected_pn]
+            st.markdown(f"### {selected_pn} の工程内容")
+            if detail_m.buhi_mei:
+                st.caption(f"部品名: {detail_m.buhi_mei}")
 
-        proc_rows = []
-        for proc in detail_m.processes:
-            proc_rows.append({
-                "工程順": proc.kote_jun,
-                "工程": proc.koutei,
-                "課": proc.ka,
-                "班": proc.han,
-                "業者": proc.gyusya,
-                "業者コスト": float(proc.gyusyacost) if proc.gyusyacost is not None else None,
-                "段取時間": float(proc.in_plan_t) if proc.in_plan_t is not None else None,
-                "LOT付帯": float(proc.lot_inc_t) if proc.lot_inc_t is not None else None,
-                "部品付帯": float(proc.buh_inc_t) if proc.buh_inc_t is not None else None,
-                "加工サイクル": float(proc.kakou_cycle_t) if proc.kakou_cycle_t is not None else None,
-                "機人": proc.kijin_flg,
-                "材料費": float(proc.zairyo_cost) if proc.zairyo_cost is not None else None,
-            })
-        if proc_rows:
-            proc_df = pd.DataFrame(proc_rows)
-            st.dataframe(proc_df, use_container_width=True, hide_index=True)
+            proc_rows = []
+            for proc in detail_m.processes:
+                proc_rows.append({
+                    "工程順": proc.kote_jun,
+                    "工程": proc.koutei,
+                    "課": proc.ka,
+                    "班": proc.han,
+                    "業者": proc.gyusya,
+                    "業者コスト": float(proc.gyusyacost) if proc.gyusyacost is not None else None,
+                    "段取時間": float(proc.in_plan_t) if proc.in_plan_t is not None else None,
+                    "LOT付帯": float(proc.lot_inc_t) if proc.lot_inc_t is not None else None,
+                    "部品付帯": float(proc.buh_inc_t) if proc.buh_inc_t is not None else None,
+                    "加工サイクル": float(proc.kakou_cycle_t) if proc.kakou_cycle_t is not None else None,
+                    "機人": proc.kijin_flg,
+                    "材料費": float(proc.zairyo_cost) if proc.zairyo_cost is not None else None,
+                })
+            if proc_rows:
+                proc_df = pd.DataFrame(proc_rows)
+                st.dataframe(proc_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("工程データがありません。")
         else:
-            st.info("工程データがありません。")
+            st.info(f"{selected_pn} の工程データがHONPSに登録されていません。")

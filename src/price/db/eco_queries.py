@@ -116,7 +116,7 @@ FETCH_KAKAKUHYOU = """
        AND kh.sgy_bumon_kbn = ''
        AND kh.seiban = ''
        AND kh.hinban IN ({placeholders})
-     ORDER BY kh.hinban
+     ORDER BY km.hinban
 """
 
 # 為替レート (単一通貨)

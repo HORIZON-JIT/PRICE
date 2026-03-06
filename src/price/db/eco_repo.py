@@ -10,7 +10,9 @@ from decimal import Decimal
 
 from price.db import eco_queries as Q
 from price.db.pool import PoolManager, chunk_list, make_bind_placeholders
-from price.models.manufacturing import AssemblyComponent, SeizouRow
+from price.models.manufacturing import (
+    AssemblyComponent, MDetail, MProcessRow, SeizouRow,
+)
 from price.models.part import HyotankaRow, KakakuRow, ParentChild, ShohinBuhin
 
 
@@ -70,6 +72,38 @@ class EcoRepo:
                         )
                         result[sr.oya_hinban].append(sr)
         return dict(result)
+
+    @staticmethod
+    def fetch_m_details(part_numbers: list[str]) -> dict[str, MDetail]:
+        """ECO製造ビューからM番工程詳細をMDetail形式で取得.
+
+        VBAの M番_計算() に対応。SeizouRow を MProcessRow/MDetail に変換する。
+        """
+        seizou = EcoRepo.fetch_seizou_view(part_numbers)
+        result: dict[str, MDetail] = {}
+        for hinban, rows in seizou.items():
+            processes = []
+            for i, sr in enumerate(rows, 1):
+                processes.append(MProcessRow(
+                    kote_jun=i,
+                    koutei=sr.ko_hinban,
+                    ka="",
+                    han="",
+                    gyusya=sr.torisaki_cd,
+                    gyusyacost=sr.gaichu_cost,
+                    in_plan_t=sr.dandori_time,
+                    lot_inc_t=sr.lot_futai,
+                    buh_inc_t=sr.buhin_futai,
+                    kakou_cycle_t=sr.machining_cycle,
+                    kijin_flg=sr.kizin_kbn,
+                    zairyo_cost=sr.zairyo_cost,
+                ))
+            result[hinban] = MDetail(
+                zuban=hinban,
+                buhi_mei=rows[0].hm_nm_1 if rows else "",
+                processes=processes,
+            )
+        return result
 
     @staticmethod
     def fetch_parent_child(part_numbers: list[str]) -> dict[str, list[ParentChild]]:

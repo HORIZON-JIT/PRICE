@@ -125,12 +125,19 @@ FETCH_KAKAKUHYOU = """
      ORDER BY kh.hinban
 """
 
-# 為替レート
+# 為替レート (単一通貨)
 # VBA: 購入品4番() - 通貨ごとに1回
 FETCH_RATE = """
     SELECT DISTINCT rm.rate
       FROM ecouser.t_rate_mst rm
      WHERE rm.tuuka_cd_from = :currency
+"""
+
+# 為替レート (複数通貨一括)
+FETCH_RATES = """
+    SELECT DISTINCT rm.tuuka_cd_from, rm.rate
+      FROM ecouser.t_rate_mst rm
+     WHERE rm.tuuka_cd_from IN ({placeholders})
 """
 
 # A番構成部品取得

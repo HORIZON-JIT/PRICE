@@ -396,7 +396,7 @@ if "results" in st.session_state:
     buf.seek(0)
 
     st.download_button(
-        label="Excelダウンロード",
+        label="ECO取込用ファイル出力",
         data=buf,
         file_name="price_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.document",

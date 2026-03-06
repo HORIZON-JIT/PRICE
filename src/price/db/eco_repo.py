@@ -89,7 +89,7 @@ class EcoRepo:
                     ka="",
                     han="",
                     gyusya=sr.torisaki_cd,
-                    gyusyacost=sr.gaichu_cost,
+                    gyusyacost=None,
                     in_plan_t=sr.dandori_time,
                     lot_inc_t=sr.lot_futai,
                     buh_inc_t=sr.buhin_futai,

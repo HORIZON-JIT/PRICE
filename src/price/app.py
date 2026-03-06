@@ -334,6 +334,15 @@ if "results" in st.session_state:
     if selected_pn and _is_m_part(selected_pn):
         st.markdown("---")
         st.subheader("M番 工程内容詳細")
+
+        # 結果一覧と同じ hyotanka から外注コストを表示
+        pr = next((r for r in results if r.buhin_bango == selected_pn), None)
+        if pr:
+            col1, col2, col3 = st.columns(3)
+            col1.metric("外注コスト", f"{pr.gaikote_cost:,.0f}" if pr.gaikote_cost is not None else "-")
+            col2.metric("内作コスト", f"{pr.naikote_cost:,.0f}" if pr.naikote_cost is not None else "-")
+            col3.metric("購入コスト", f"{pr.konyu_cost:,.0f}" if pr.konyu_cost is not None else "-")
+
         if selected_pn in m_details:
             detail_m = m_details[selected_pn]
             st.markdown(f"### {selected_pn} の工程内容")
@@ -342,13 +351,17 @@ if "results" in st.session_state:
 
             proc_rows = []
             for proc in detail_m.processes:
-                proc_rows.append({
+                row_data = {
                     "工程順": proc.kote_jun,
                     "工程": proc.koutei,
                     "課": proc.ka,
                     "班": proc.han,
                     "業者": proc.gyusya,
-                    "業者コスト": float(proc.gyusyacost) if proc.gyusyacost is not None else None,
+                }
+                # 業者コストはデータがある場合のみ表示
+                if proc.gyusyacost is not None:
+                    row_data["業者コスト"] = float(proc.gyusyacost)
+                row_data.update({
                     "段取時間": float(proc.in_plan_t) if proc.in_plan_t is not None else None,
                     "LOT付帯": float(proc.lot_inc_t) if proc.lot_inc_t is not None else None,
                     "部品付帯": float(proc.buh_inc_t) if proc.buh_inc_t is not None else None,
@@ -356,6 +369,7 @@ if "results" in st.session_state:
                     "機人": proc.kijin_flg,
                     "材料費": float(proc.zairyo_cost) if proc.zairyo_cost is not None else None,
                 })
+                proc_rows.append(row_data)
             if proc_rows:
                 proc_df = pd.DataFrame(proc_rows)
                 st.dataframe(proc_df, use_container_width=True, hide_index=True)

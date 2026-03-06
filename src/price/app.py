@@ -439,14 +439,7 @@ if "results" in st.session_state:
             {"label": "A番H仕切", "value": a_h_sikiri_val},
         ]
 
-        _state_key = f"metric_order_{selected_pn}"
-        if _state_key not in st.session_state:
-            st.session_state[_state_key] = list(range(len(_metrics)))
-        _order = st.session_state[_state_key]
-        _ordered_metrics = [_metrics[i] for i in _order]
-
-        _metrics_json = _json.dumps(_ordered_metrics, ensure_ascii=False)
-        _order_json = _json.dumps(_order)
+        _metrics_json = _json.dumps(_metrics, ensure_ascii=False)
         _component_html = f"""
         <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
         <style>
@@ -495,21 +488,52 @@ if "results" in st.session_state:
         <div class="metric-grid" id="metricGrid">
         </div>
         <script>
+            const STORAGE_KEY = 'price_metric_order';
             const metrics = {_metrics_json};
-            const originalOrder = {_order_json};
+
+            // localStorageから保存済みのラベル順を取得
+            let savedOrder = null;
+            try {{
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) savedOrder = JSON.parse(raw);
+            }} catch(e) {{}}
+
+            // 保存済み順序でメトリクスを並べ替え
+            let ordered = metrics;
+            if (savedOrder && Array.isArray(savedOrder) && savedOrder.length === metrics.length) {{
+                const byLabel = {{}};
+                metrics.forEach(m => {{ byLabel[m.label] = m; }});
+                const reordered = [];
+                savedOrder.forEach(lbl => {{
+                    if (byLabel[lbl]) reordered.push(byLabel[lbl]);
+                }});
+                // 保存順に無いラベル（新規追加等）があれば末尾に追加
+                metrics.forEach(m => {{
+                    if (!reordered.includes(m)) reordered.push(m);
+                }});
+                if (reordered.length === metrics.length) ordered = reordered;
+            }}
+
             const grid = document.getElementById('metricGrid');
-            metrics.forEach((m, i) => {{
+            ordered.forEach(m => {{
                 const card = document.createElement('div');
                 card.className = 'metric-card';
-                card.dataset.idx = originalOrder[i];
+                card.dataset.label = m.label;
                 card.innerHTML = '<div class="metric-label">' + m.label + '</div>'
                                + '<div class="metric-value">' + m.value + '</div>';
                 grid.appendChild(card);
             }});
+
             new Sortable(grid, {{
                 animation: 200,
                 ghostClass: 'sortable-ghost',
                 chosenClass: 'sortable-chosen',
+                onEnd: function() {{
+                    // ドラッグ終了時にラベル順をlocalStorageに保存
+                    const cards = grid.querySelectorAll('.metric-card');
+                    const labels = Array.from(cards).map(c => c.dataset.label);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(labels));
+                }}
             }});
         </script>
         """

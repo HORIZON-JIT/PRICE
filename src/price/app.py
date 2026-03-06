@@ -209,6 +209,14 @@ if "results" in st.session_state:
             lo_style = "background-color: #00FFFF; color: #000000"
             styles[idx["H仕切り"]] = styles[idx["H仕切り"]] + "; " + lo_style if styles[idx["H仕切り"]] else lo_style
 
+        # 部品区分が2または4を含む場合は赤塗り
+        kubun = row_series.get("部品区分")
+        if kubun:
+            kubun_values = str(kubun).split("_")
+            if "2" in kubun_values or "4" in kubun_values:
+                red_bg = "background-color: #FF0000; color: #FFFFFF"
+                styles[idx["部品区分"]] = styles[idx["部品区分"]] + "; " + red_bg if styles[idx["部品区分"]] else red_bg
+
         return styles
 
     styled_df = df.style.apply(_highlight_rows, axis=1)

@@ -203,6 +203,13 @@ if "results" in st.session_state:
         height=600,
     )
 
+    # 在庫CD未登録チェック
+    missing_zaiko = [r.buhin_bango for r in results if not r.zaiko_cd]
+    if missing_zaiko:
+        st.error("在庫CDが登録されていません")
+        with st.expander(f"対象品番 ({len(missing_zaiko)}件)"):
+            st.write(", ".join(missing_zaiko))
+
     # Excel ダウンロード
     buf = io.BytesIO()
     write_results(results, buf)

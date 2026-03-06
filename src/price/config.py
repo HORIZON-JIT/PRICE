@@ -72,7 +72,7 @@ class AppConfig:
     chunk_size: int = 999
     max_depth: int = 10
     history_days: int = 365
-    a_assembly_mode: str = "simple"  # "simple"=簡易式, "kousuu"=工数反映式
+    a_assembly_mode: str = "simple"  # "simple"=簡易式, "kousuu"=工数反映式, "kousuu_2026"=工数反映式_2026新型
 
 
 def _to_decimal(val) -> Decimal:

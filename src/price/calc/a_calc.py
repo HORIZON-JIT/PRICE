@@ -113,11 +113,21 @@ class ACalculator(BaseCalculator):
 
             # 組立コスト計算: 方式による分岐
             component_count = max(len(components), 5)  # 最低5部品分
-            if assembly_mode == "kousuu":
+            if assembly_mode == "kousuu_2026":
+                # 工数反映式_2026新型: 社外組立費がある場合は工数×チャージを除外（二重取り防止）
+                assembly_cost = a_assembly_cost.get(pn, Decimal("0"))
+                dandori_time = kousuu_data.get("dandori_time", Decimal("0"))
+                kousuu_min = dandori_time / 60 + Decimal(str(component_count)) * 2
+                if assembly_cost > 0:
+                    # 社外組立費あり → 工数×チャージは除外
+                    kousuu_x_charge = Decimal("0")
+                    cost_addition = assembly_cost
+                else:
+                    # 社外組立費なし → 工数×チャージを使用
+                    kousuu_x_charge = kousuu_min / 60 * self.rate_cfg.charge_rate
+                    cost_addition = kousuu_x_charge
+            elif assembly_mode == "kousuu":
                 # 工数反映式: dandori_time + 部品数×2 で工数計算、社外組立費を加算
-                # VBA: 工数(min) = dandori_time/60 + (部品数)*2
-                #      工数×チャージ = 工数/60 × charge_rate
-                #      原価合計 = 部品合計 + 工数×チャージ + 社外組立費
                 assembly_cost = a_assembly_cost.get(pn, Decimal("0"))
                 dandori_time = kousuu_data.get("dandori_time", Decimal("0"))
                 kousuu_min = dandori_time / 60 + Decimal(str(component_count)) * 2

@@ -422,28 +422,110 @@ if "results" in st.session_state:
         else:
             st.markdown(f"### {selected_pn} の構成部品")
 
-        # サマリー情報
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("単価合計", f"{detail.buhin_total:,.0f}")
-        col2.metric("H仕切合計", f"{detail.h_sikiri_total:,}")
-        col3.metric("工数×チャージ", f"{detail.kousuu_x_charge:,.0f}")
-        col4.metric("社外組立費", f"{detail.kumitate_gaichuhi:,.0f}")
-
-        col5, col6, col7, col8 = st.columns(4)
-        col5.metric("工数(分)", f"{detail.kousuu:,.1f}")
-        col6.metric("単価合計+組立費", f"{detail.genka_total:,.0f}")
+        # サマリー情報（ドラッグ＆ドロップで並べ替え可能）
         h_sikiri_plus_kumitate = detail.h_sikiri_total + int(detail.kousuu_x_charge) + int(detail.kumitate_gaichuhi)
-        col7.metric("H仕切合計+組立費", f"{h_sikiri_plus_kumitate:,}")
         a_result = next((r for r in results if r.buhin_bango == selected_pn), None)
-        col8.metric("A番H仕切", f"{a_result.h_sikiri:,}" if a_result and a_result.h_sikiri else "-")
+        a_h_sikiri_val = f"{a_result.h_sikiri:,}" if a_result and a_result.h_sikiri else "-"
+
+        import json as _json
+        _metrics = [
+            {"label": "単価合計", "value": f"{detail.buhin_total:,.0f}"},
+            {"label": "H仕切合計", "value": f"{detail.h_sikiri_total:,}"},
+            {"label": "工数×チャージ", "value": f"{detail.kousuu_x_charge:,.0f}"},
+            {"label": "社外組立費", "value": f"{detail.kumitate_gaichuhi:,.0f}"},
+            {"label": "工数(分)", "value": f"{detail.kousuu:,.1f}"},
+            {"label": "単価合計+組立費", "value": f"{detail.genka_total:,.0f}"},
+            {"label": "H仕切合計+組立費", "value": f"{h_sikiri_plus_kumitate:,}"},
+            {"label": "A番H仕切", "value": a_h_sikiri_val},
+        ]
+
+        _state_key = f"metric_order_{selected_pn}"
+        if _state_key not in st.session_state:
+            st.session_state[_state_key] = list(range(len(_metrics)))
+        _order = st.session_state[_state_key]
+        _ordered_metrics = [_metrics[i] for i in _order]
+
+        _metrics_json = _json.dumps(_ordered_metrics, ensure_ascii=False)
+        _order_json = _json.dumps(_order)
+        _component_html = f"""
+        <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+        <style>
+            .metric-grid {{
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+                padding: 4px;
+            }}
+            .metric-card {{
+                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                border: 1px solid #dee2e6;
+                border-radius: 10px;
+                padding: 16px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+                cursor: grab;
+                user-select: none;
+                transition: box-shadow 0.2s, transform 0.2s;
+            }}
+            .metric-card:active {{
+                cursor: grabbing;
+            }}
+            .metric-card.sortable-ghost {{
+                opacity: 0.4;
+                box-shadow: 0 4px 16px rgba(15,52,96,0.3);
+            }}
+            .metric-card.sortable-chosen {{
+                box-shadow: 0 4px 16px rgba(15,52,96,0.3);
+                transform: scale(1.03);
+            }}
+            .metric-label {{
+                color: #495057;
+                font-weight: 600;
+                font-size: 0.75rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 4px;
+            }}
+            .metric-value {{
+                color: #1a1a2e;
+                font-weight: 700;
+                font-size: 1.8rem;
+                line-height: 1.2;
+            }}
+        </style>
+        <div class="metric-grid" id="metricGrid">
+        </div>
+        <script>
+            const metrics = {_metrics_json};
+            const originalOrder = {_order_json};
+            const grid = document.getElementById('metricGrid');
+            metrics.forEach((m, i) => {{
+                const card = document.createElement('div');
+                card.className = 'metric-card';
+                card.dataset.idx = originalOrder[i];
+                card.innerHTML = '<div class="metric-label">' + m.label + '</div>'
+                               + '<div class="metric-value">' + m.value + '</div>';
+                grid.appendChild(card);
+            }});
+            new Sortable(grid, {{
+                animation: 200,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+            }});
+        </script>
+        """
+        st.components.v1.html(_component_html, height=220)
 
         # 構成部品テーブル（行選択でM番工程詳細を表示）
         comp_rows = []
         for comp in detail.components:
+            tanka_val = float(comp.tanka) if comp.tanka is not None else None
+            inzuu_val = int(comp.inzuu)
+            tanka_x_inzuu = tanka_val * inzuu_val if tanka_val is not None else None
             comp_rows.append({
                 "部品番号": comp.buhin_bango,
-                "員数": int(comp.inzuu),
-                "単価": float(comp.tanka) if comp.tanka is not None else None,
+                "員数": inzuu_val,
+                "単価": tanka_val,
+                "単価×員数": tanka_x_inzuu,
                 "H仕切り": comp.h_sikiri,
                 "H仕切り×員数": comp.h_sikiri_x_inzuu,
                 "部品名": comp.buhin_name,
@@ -455,6 +537,7 @@ if "results" in st.session_state:
                 "部品番号": "",
                 "員数": "",
                 "単価": comp_df["単価"].sum(),
+                "単価×員数": comp_df["単価×員数"].sum(),
                 "H仕切り": comp_df["H仕切り"].sum(),
                 "H仕切り×員数": comp_df["H仕切り×員数"].sum(),
                 "部品名": "",

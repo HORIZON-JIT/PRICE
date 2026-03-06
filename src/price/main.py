@@ -66,6 +66,8 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
                    if classify_prefix(pn) != PartPrefix.A]
     print("  標準単価を取得中...")
     data["hyotanka"] = HonpsRepo.fetch_hyotanka(non_a_parts)
+    # デバッグ情報を取り出し
+    data["_hyotanka_debug"] = data["hyotanka"].pop("__debug__", [])
 
     # A番の構成部品の標準単価も取得
     a_parts = groups.get(PartPrefix.A, [])
@@ -180,6 +182,7 @@ def process_parts(
         "null_count": null_count,
         "assembly_details": dispatcher.get_assembly_details(),
         "m_details": m_details,
+        "hyotanka_debug": data.get("_hyotanka_debug", []),
     }
     return results, stats
 

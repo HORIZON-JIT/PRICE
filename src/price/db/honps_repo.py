@@ -1,6 +1,7 @@
 """HONPSデータベースのバッチ取得メソッド群."""
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from decimal import Decimal
 
@@ -8,6 +9,8 @@ from price.db import honps_queries as Q
 from price.db.pool import PoolManager, chunk_list, make_bind_placeholders
 from price.models.manufacturing import MDetail, MProcessRow
 from price.models.part import HyotankaRow
+
+logger = logging.getLogger(__name__)
 
 
 class HonpsRepo:
@@ -22,6 +25,7 @@ class HonpsRepo:
         ビューで取得できなかった品番は ta_hyotanka (ベーステーブル) からフォールバック取得する。
         """
         result: dict[str, HyotankaRow] = {}
+        debug_info: list[str] = []
         with PoolManager.honps_conn() as conn:
             # 1. ビュー (hv_ma_ta_hyotanka) から取得
             for chunk in chunk_list(part_numbers):
@@ -41,10 +45,19 @@ class HonpsRepo:
                         )
                         result[ht.hinban] = ht
 
+            view_count = len(result)
+            view_null = [pn for pn in result if result[pn].standard_price is None]
+            debug_info.append(f"[VIEW] 入力: {len(part_numbers)}件, 取得: {view_count}件, 単価NULL: {len(view_null)}件")
+            if view_null:
+                debug_info.append(f"[VIEW] 単価NULLの品番: {view_null[:10]}")
+
             # 2. ビューで取得できなかった品番を ta_hyotanka からフォールバック取得
             missing = [pn for pn in part_numbers
                        if pn not in result or result[pn].standard_price is None]
+            debug_info.append(f"[FALLBACK] 未取得品番: {len(missing)}件")
             if missing:
+                debug_info.append(f"[FALLBACK] 対象: {missing[:10]}")
+                fallback_count = 0
                 for chunk in chunk_list(missing):
                     ph = make_bind_placeholders(len(chunk))
                     sql = Q.FETCH_TA_HYOTANKA.format(placeholders=ph)
@@ -52,6 +65,7 @@ class HonpsRepo:
                         cur.execute(sql, chunk)
                         for row in cur:
                             hinban, tan_cost = row[0], row[1]
+                            fallback_count += 1
                             if tan_cost is not None:
                                 if hinban in result:
                                     result[hinban].standard_price = Decimal(str(tan_cost))
@@ -60,6 +74,18 @@ class HonpsRepo:
                                         hinban=hinban,
                                         standard_price=Decimal(str(tan_cost)),
                                     )
+                debug_info.append(f"[FALLBACK] ta_hyotanka から取得: {fallback_count}件")
+
+            # 最終状態
+            still_missing = [pn for pn in part_numbers
+                             if pn not in result or result[pn].standard_price is None]
+            if still_missing:
+                debug_info.append(f"[FINAL] まだ取得できない品番: {still_missing[:10]}")
+
+        for line in debug_info:
+            logger.info(line)
+        # Streamlit画面からも確認できるよう、結果に診断情報を添付
+        result["__debug__"] = debug_info  # type: ignore[assignment]
         return result
 
     @staticmethod

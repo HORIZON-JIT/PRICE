@@ -61,14 +61,13 @@ class EcoRepo:
                             naigaisaku_kbn=row[3] or "",
                             ko_hinban=row[4] or "",
                             torisaki_cd=row[5] or "",
-                            gaichu_cost=Decimal(str(row[6])) if row[6] is not None else None,
-                            dandori_time=Decimal(str(row[7])) if row[7] is not None else None,
-                            lot_futai=Decimal(str(row[8])) if row[8] is not None else None,
-                            buhin_futai=Decimal(str(row[9])) if row[9] is not None else None,
-                            machining_cycle=Decimal(str(row[10])) if row[10] is not None else None,
-                            kizin_kbn=row[11] or "",
-                            line_no=str(row[12]) if row[12] is not None else "",
-                            oya_line_no=str(row[13]) if row[13] is not None else "",
+                            dandori_time=Decimal(str(row[6])) if row[6] is not None else None,
+                            lot_futai=Decimal(str(row[7])) if row[7] is not None else None,
+                            buhin_futai=Decimal(str(row[8])) if row[8] is not None else None,
+                            machining_cycle=Decimal(str(row[9])) if row[9] is not None else None,
+                            kizin_kbn=row[10] or "",
+                            line_no=str(row[11]) if row[11] is not None else "",
+                            oya_line_no=str(row[12]) if row[12] is not None else "",
                         )
                         result[sr.oya_hinban].append(sr)
         return dict(result)

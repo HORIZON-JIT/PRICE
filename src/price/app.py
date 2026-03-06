@@ -190,9 +190,8 @@ if "results" in st.session_state:
         return styles
 
     styled_df = df.style.apply(_highlight_rows, axis=1)
-    st.dataframe(styled_df, use_container_width=True, height=600)
 
-    # ---------- 詳細表示セレクトボックス ----------
+    # ---------- 結果テーブル + 詳細選択パネル ----------
     assembly_details = stats.get("assembly_details", {})
     m_details = stats.get("m_details", {})
     nav_a = [r.buhin_bango for r in results
@@ -202,26 +201,35 @@ if "results" in st.session_state:
     nav_m_child = [pn for pn in m_details if pn not in set(nav_m_top)]
     nav_m = nav_m_top + nav_m_child
 
-    if nav_a or nav_m:
-        sel_col1, sel_col2 = st.columns(2)
-        with sel_col1:
+    has_details = bool(nav_a or nav_m)
+    if has_details:
+        tbl_col, nav_col = st.columns([3, 1])
+    else:
+        tbl_col = st.container()
+
+    with tbl_col:
+        st.dataframe(styled_df, use_container_width=True, height=600)
+
+    if has_details:
+        with nav_col:
+            st.markdown("#### 詳細表示")
             if nav_a:
-                a_options = ["（選択してください）"] + [
+                a_options = ["-- A番を選択 --"] + [
                     f"{pn} ⚠" if assembly_details.get(pn) and assembly_details[pn].has_null_data else pn
                     for pn in nav_a
                 ]
-                a_selected = st.selectbox("A番 構成部品詳細", a_options, key="sel_a_detail")
-                if a_selected != "（選択してください）":
+                a_selected = st.selectbox("A番 構成部品", a_options, key="sel_a_detail",
+                                          label_visibility="collapsed")
+                if a_selected != "-- A番を選択 --":
                     st.session_state["selected_a_detail"] = a_selected.replace(" ⚠", "")
-        with sel_col2:
             if nav_m:
-                m_options = ["（選択してください）"] + [
+                m_options = ["-- M番を選択 --"] + [
                     f"{pn} ({m_details[pn].buhi_mei})" if m_details.get(pn) and m_details[pn].buhi_mei else pn
                     for pn in nav_m
                 ]
-                m_selected = st.selectbox("M番 工程内容詳細", m_options, key="sel_m_detail")
-                if m_selected != "（選択してください）":
-                    # 品番部分を抽出（括弧付き部品名を除去）
+                m_selected = st.selectbox("M番 工程詳細", m_options, key="sel_m_detail",
+                                          label_visibility="collapsed")
+                if m_selected != "-- M番を選択 --":
                     pn_selected = m_selected.split(" (")[0]
                     st.session_state["selected_m_detail"] = pn_selected
 

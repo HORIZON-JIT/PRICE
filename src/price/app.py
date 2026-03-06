@@ -158,7 +158,7 @@ with st.sidebar:
             ["簡易式", "工数反映式"],
             key="a_assembly_mode_select",
         )
-        a_assembly_mode = "tan_cost" if a_mode_label == "工数反映式" else "simple"
+        a_assembly_mode = "kousuu" if a_mode_label == "工数反映式" else "simple"
     elif pw:
         st.error("パスワードが違います")
 

@@ -106,6 +106,9 @@ def prefetch_data(part_numbers: list[str], config: AppConfig) -> dict:
     if four_parts:
         print("  購入品価格を取得中...")
         data["kakakuhyou"] = EcoRepo.fetch_kakakuhyou(four_parts)
+        # デバッグ情報を取り出し
+        data.setdefault("_kakaku_debug", [])
+        data["_kakaku_debug"] = data["kakakuhyou"].pop("__debug__", [])
         # 外貨レートの取得
         currencies = set()
         for kk in data["kakakuhyou"].values():
@@ -183,6 +186,7 @@ def process_parts(
         "assembly_details": dispatcher.get_assembly_details(),
         "m_details": m_details,
         "hyotanka_debug": data.get("_hyotanka_debug", []),
+        "kakaku_debug": data.get("_kakaku_debug", []),
     }
     return results, stats
 

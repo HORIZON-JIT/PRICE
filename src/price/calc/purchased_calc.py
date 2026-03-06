@@ -16,6 +16,7 @@ class PurchasedCalculator(BaseCalculator):
 
     def calculate(self, part_numbers: list[str], data: dict) -> list[PriceResult]:
         kakakuhyou = data.get("kakakuhyou", {})
+        hyotanka = data.get("hyotanka", {})
         fx_rates = data.get("fx_rates", {})
         results = []
 
@@ -29,6 +30,12 @@ class PurchasedCalculator(BaseCalculator):
                 rate = fx_rates.get(currency)
                 if rate is not None:
                     tanka = convert_to_jpy(tanka, rate)
+
+            # ECO価格表にない場合、HONPS標準単価をフォールバック
+            if tanka is None or tanka == 0:
+                ht = hyotanka.get(pn)
+                if ht and ht.standard_price is not None and ht.standard_price > 0:
+                    tanka = ht.standard_price
 
             h_sikiri = None
             if tanka is not None and tanka > 0:

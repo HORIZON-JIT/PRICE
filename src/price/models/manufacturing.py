@@ -12,7 +12,6 @@ class SeizouRow:
     naigaisaku_kbn: str = ""         # 内外作区分 (PC001/PC002/PC003)
     ko_hinban: str = ""              # 工程
     torisaki_cd: str = ""            # 業者
-    gaichu_cost: Decimal | None = None  # 外注費
     dandori_time: Decimal | None = None  # 内段取り
     lot_futai: Decimal | None = None     # LOT付帯
     buhin_futai: Decimal | None = None   # 部品付帯

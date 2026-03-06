@@ -17,7 +17,119 @@ from price.main import process_parts
 from price.models.enums import PartPrefix, classify_prefix
 
 # ---------- ページ設定 ----------
-st.set_page_config(page_title="価格演算", layout="wide")
+st.set_page_config(page_title="価格演算", layout="wide", page_icon="💰")
+
+# ---------- カスタムCSS ----------
+st.markdown("""
+<style>
+/* ヘッダー */
+.main-header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+.main-header h1 {
+    color: #e0e0e0;
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.05em;
+}
+.main-header p {
+    color: #8a8a9a;
+    font-size: 0.9rem;
+    margin: 0.3rem 0 0 0;
+}
+
+/* メトリクスカード */
+[data-testid="stMetric"] {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+[data-testid="stMetric"] label {
+    color: #495057;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    color: #1a1a2e;
+    font-weight: 700;
+}
+
+/* セクションヘッダー */
+.section-header {
+    background: linear-gradient(90deg, #0f3460, #16213e);
+    color: #e0e0e0;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 1rem 0 0.8rem 0;
+    letter-spacing: 0.03em;
+}
+
+/* ボタンスタイル */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(15,52,96,0.3);
+}
+.stButton > button[kind="primary"]:hover {
+    box-shadow: 0 4px 20px rgba(15,52,96,0.5);
+    transform: translateY(-1px);
+}
+
+/* タブ */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px 8px 0 0;
+    padding: 0.6rem 1.5rem;
+    font-weight: 600;
+}
+
+/* データフレーム */
+[data-testid="stDataFrame"] {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+/* サイドバー */
+section[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+}
+section[data-testid="stSidebar"] .stMarkdown {
+    color: #c0c0d0;
+}
+
+/* 仕切り線 */
+hr {
+    border: none;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #0f3460, transparent);
+    margin: 1.5rem 0;
+}
+
+/* expander */
+.streamlit-expanderHeader {
+    font-weight: 600;
+    color: #1a1a2e;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ---------- サイドバー: 設定（パスワード保護） ----------
 _SETTINGS_PASS = "0018"
@@ -29,10 +141,10 @@ rates_excel_path = None
 rates_sheet_name = "テーブル"
 
 with st.sidebar:
+    st.markdown("### ⚙️ 設定")
     pw = st.text_input("設定パスワード", type="password", key="sidebar_pw")
     if pw == _SETTINGS_PASS:
-        st.header("設定")
-
+        st.success("認証OK")
         settings_path = st.text_input("DB設定ファイル", value="config/settings.yaml")
 
         rate_source = st.radio("掛率ソース", ["YAML", "Excel"])
@@ -47,26 +159,16 @@ with st.sidebar:
     elif pw:
         st.error("パスワードが違います")
 
-# ---------- メインエリア ----------
-st.title("価格演算システム")
-
-# ---------- 入力タブ ----------
-tab_manual, tab_excel = st.tabs(["手入力", "Excelアップロード"])
-
-with tab_excel:
-    uploaded_file = st.file_uploader(
-        "品番リスト（A列に品番、1行目ヘッダー）",
-        type=["xlsx"],
-    )
-
-with tab_manual:
-    manual_input = st.text_area(
-        "品番を1行ずつ入力してください",
-        height=200,
-        placeholder="M12345\n4ABCDE\nA99999",
-    )
+# ---------- ヘッダー ----------
+st.markdown("""
+<div class="main-header">
+    <h1>💰 価格演算システム</h1>
+    <p>品番から標準単価・H仕切りを自動算出</p>
+</div>
+""", unsafe_allow_html=True)
 
 
+# ---------- ユーティリティ ----------
 def _is_a_part(buhin_bango: str) -> bool:
     """A番かどうか判定する."""
     try:
@@ -81,6 +183,36 @@ def _is_m_part(buhin_bango: str) -> bool:
         return classify_prefix(buhin_bango) == PartPrefix.M
     except ValueError:
         return False
+
+
+# ---------- 一括クリアコールバック ----------
+def _clear_inputs():
+    """手入力フィールドとアップロードファイルをクリアする."""
+    st.session_state["manual_input_area"] = ""
+    st.session_state["excel_uploader"] = None
+    if "results" in st.session_state:
+        del st.session_state["results"]
+    if "stats" in st.session_state:
+        del st.session_state["stats"]
+
+
+# ---------- 入力タブ ----------
+tab_manual, tab_excel = st.tabs(["📝 手入力", "📁 Excelアップロード"])
+
+with tab_excel:
+    uploaded_file = st.file_uploader(
+        "品番リスト（A列に品番、1行目ヘッダー）",
+        type=["xlsx"],
+        key="excel_uploader",
+    )
+
+with tab_manual:
+    manual_input = st.text_area(
+        "品番を1行ずつ入力してください",
+        height=200,
+        placeholder="M12345\n4ABCDE\nA99999",
+        key="manual_input_area",
+    )
 
 
 def _get_part_numbers() -> list[str] | None:
@@ -101,8 +233,14 @@ def _get_part_numbers() -> list[str] | None:
     return None
 
 
-# ---------- 実行ボタン ----------
-if st.button("実行", type="primary", use_container_width=True):
+# ---------- ボタン ----------
+btn_col1, btn_col2 = st.columns([3, 1])
+with btn_col1:
+    run_clicked = st.button("▶ 実行", type="primary", use_container_width=True)
+with btn_col2:
+    st.button("🗑 クリア", on_click=_clear_inputs, use_container_width=True)
+
+if run_clicked:
     part_numbers = _get_part_numbers()
     if part_numbers is None:
         st.error("品番が入力されていません。Excelをアップロードするか、手入力してください。")
@@ -153,6 +291,8 @@ if "results" in st.session_state:
     stats = st.session_state["stats"]
 
     # サマリー指標
+    st.markdown('<div class="section-header">📊 処理結果サマリー</div>',
+                unsafe_allow_html=True)
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("処理件数", stats["total"])
     col2.metric("NULLデータ", stats["null_count"])
@@ -162,7 +302,7 @@ if "results" in st.session_state:
     # デバッグ情報
     all_debug = stats.get("hyotanka_debug", []) + stats.get("kakaku_debug", [])
     if all_debug:
-        with st.expander("データ取得ログ (デバッグ)"):
+        with st.expander("🔍 データ取得ログ (デバッグ)"):
             for line in all_debug:
                 st.text(line)
 
@@ -223,7 +363,9 @@ if "results" in st.session_state:
     assembly_details = stats.get("assembly_details", {})
     m_details = stats.get("m_details", {})
 
-    # ---------- 結果テーブル（行選択で詳細表示） ----------
+    # ---------- 結果テーブル ----------
+    st.markdown('<div class="section-header">📋 結果一覧</div>',
+                unsafe_allow_html=True)
     st.caption("A番・M番の行を選択すると詳細が表示されます")
     event = st.dataframe(
         styled_df,
@@ -246,7 +388,7 @@ if "results" in st.session_state:
     buf.seek(0)
 
     st.download_button(
-        label="Excelダウンロード",
+        label="📥 Excelダウンロード",
         data=buf,
         file_name="price_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.document",
@@ -262,7 +404,8 @@ if "results" in st.session_state:
     # ---------- A番 構成部品詳細 ----------
     if selected_pn and _is_a_part(selected_pn) and selected_pn in assembly_details:
         st.markdown("---")
-        st.subheader("A番 構成部品詳細")
+        st.markdown('<div class="section-header">🔧 A番 構成部品詳細</div>',
+                    unsafe_allow_html=True)
         detail = assembly_details[selected_pn]
 
         if detail.has_null_data:
@@ -333,7 +476,8 @@ if "results" in st.session_state:
     # ---------- M番 工程内容詳細 ----------
     if selected_pn and _is_m_part(selected_pn):
         st.markdown("---")
-        st.subheader("M番 工程内容詳細")
+        st.markdown('<div class="section-header">⚙️ M番 工程内容詳細</div>',
+                    unsafe_allow_html=True)
 
         # 結果一覧と同じ hyotanka から外注コストを表示
         pr = next((r for r in results if r.buhin_bango == selected_pn), None)

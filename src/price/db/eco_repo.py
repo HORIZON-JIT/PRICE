@@ -133,7 +133,10 @@ class EcoRepo:
     @staticmethod
     def fetch_kakakuhyou(part_numbers: list[str]) -> dict[str, KakakuRow]:
         """購入品の価格表データを一括取得."""
+        import logging
+        logger = logging.getLogger(__name__)
         result: dict[str, KakakuRow] = {}
+        debug_info: list[str] = []
         with PoolManager.eco_conn() as conn:
             for chunk in chunk_list(part_numbers):
                 ph = make_bind_placeholders(len(chunk))
@@ -148,6 +151,18 @@ class EcoRepo:
                         )
                         if kr.hinban:
                             result[kr.hinban] = kr
+        # デバッグ情報
+        missing = [pn for pn in part_numbers if pn not in result]
+        debug_info.append(f"[KAKAKU] 入力: {len(part_numbers)}件, 取得: {len(result)}件, 未取得: {len(missing)}件")
+        if missing:
+            debug_info.append(f"[KAKAKU] 未取得品番: {missing[:10]}")
+        if result:
+            null_tanka = [pn for pn, kr in result.items() if kr.tanka is None]
+            if null_tanka:
+                debug_info.append(f"[KAKAKU] 単価NULL: {null_tanka[:10]}")
+        for line in debug_info:
+            logger.info(line)
+        result["__debug__"] = debug_info  # type: ignore[assignment]
         return result
 
     @staticmethod

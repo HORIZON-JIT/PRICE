@@ -518,10 +518,14 @@ if "results" in st.session_state:
         # 構成部品テーブル（行選択でM番工程詳細を表示）
         comp_rows = []
         for comp in detail.components:
+            tanka_val = float(comp.tanka) if comp.tanka is not None else None
+            inzuu_val = int(comp.inzuu)
+            tanka_x_inzuu = tanka_val * inzuu_val if tanka_val is not None else None
             comp_rows.append({
                 "部品番号": comp.buhin_bango,
-                "員数": int(comp.inzuu),
-                "単価": float(comp.tanka) if comp.tanka is not None else None,
+                "員数": inzuu_val,
+                "単価": tanka_val,
+                "単価×員数": tanka_x_inzuu,
                 "H仕切り": comp.h_sikiri,
                 "H仕切り×員数": comp.h_sikiri_x_inzuu,
                 "部品名": comp.buhin_name,
@@ -533,6 +537,7 @@ if "results" in st.session_state:
                 "部品番号": "",
                 "員数": "",
                 "単価": comp_df["単価"].sum(),
+                "単価×員数": comp_df["単価×員数"].sum(),
                 "H仕切り": comp_df["H仕切り"].sum(),
                 "H仕切り×員数": comp_df["H仕切り×員数"].sum(),
                 "部品名": "",

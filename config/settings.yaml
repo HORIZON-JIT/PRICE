@@ -10,8 +10,8 @@ database:
     user: "SELECT1"
     password: "SELECT1"
     dsn: "(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=oracle.horizon.co.jp)(PORT=1521))(CONNECT_DATA=(SERVICE_NAME=TAIYO2)))"
-    pool_min: 1
-    pool_max: 5
+    pool_min: 2
+    pool_max: 8
 
 # バッチ処理設定
 batch:

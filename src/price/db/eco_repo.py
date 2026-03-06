@@ -177,6 +177,23 @@ class EcoRepo:
         return None
 
     @staticmethod
+    def fetch_rates(currencies: list[str]) -> dict[str, Decimal]:
+        """複数通貨の為替レートを一括取得."""
+        result: dict[str, Decimal] = {}
+        if not currencies:
+            return result
+        with PoolManager.eco_conn() as conn:
+            for chunk in chunk_list(currencies):
+                ph = make_bind_placeholders(len(chunk))
+                sql = Q.FETCH_RATES.format(placeholders=ph)
+                with conn.cursor() as cur:
+                    cur.execute(sql, chunk)
+                    for row in cur:
+                        if row[0] and row[1] is not None:
+                            result[row[0]] = Decimal(str(row[1]))
+        return result
+
+    @staticmethod
     def fetch_a_components(part_numbers: list[str]) -> dict[str, list[AssemblyComponent]]:
         """A番の構成部品を一括取得."""
         result: dict[str, list[AssemblyComponent]] = defaultdict(list)
